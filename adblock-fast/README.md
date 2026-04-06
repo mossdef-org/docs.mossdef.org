@@ -176,7 +176,9 @@ If you want to force adblock-fast to re-download the lists, run `/etc/init.d/adb
 
 ### How to Schedule Redownloads
 
-The command to force-redownload the lists is `/etc/init.d/adblock-fast dl` and this is what I use:
+If you have `luci-app-adblock-fast` installed, you can configure scheduled list redownloads in the Web UI under **Services → AdBlock-Fast → List Updates Schedule** tab.
+
+Alternatively, you can set up a cron job manually. The command to force-redownload the lists is `/etc/init.d/adblock-fast dl`. For example, to redownload every 3 days at 4:21 AM:
 
 ```sh
   echo '21 4 */3 * * /etc/init.d/adblock-fast dl' >> /etc/crontabs/root
@@ -315,8 +317,8 @@ A Google Chrome extension is available to control adblock-fast (start, stop, pau
 
 ### Install
 
+- [Install from Chrome Web Store](https://chromewebstore.google.com/detail/adblock-fast-controller/klkdabjeohlmbcnidbealmacfjlihopo)
 - [Download from GitHub Releases](https://github.com/mossdef-org/chrome-adblock-fast/releases)
-<!-- - [Install from Chrome Web Store](https://chrome.google.com/webstore/detail/TODO) -->
 
 To install from GitHub Releases, download the zip file, unzip it, then load it as an unpacked extension in `chrome://extensions` (enable Developer mode first).
 
