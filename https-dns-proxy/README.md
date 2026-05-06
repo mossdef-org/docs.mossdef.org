@@ -246,6 +246,18 @@ The https-dns-proxy instance settings are:
 
 Please also refer to the [Usage section at upstream README](https://github.com/aarond10/https_dns_proxy/blob/master/README.md#usage) which may contain additional/more details on some parameters.
 
+#### A note on binding instances to a source address or interface
+
+The `source_addr` option (CLI flag `-S`) accepts a **source IPv4 or IPv6 address** that outbound HTTPS and bootstrap DNS queries will originate from. The kernel's routing table then determines the egress interface based on that source IP.
+
+```text
+option source_addr '203.0.113.10'
+```
+
+The configured IP must currently be assigned to an interface on the router; the package does not automatically re-evaluate `source_addr` if the interface's IP changes (e.g. DHCP renewal with a new lease).
+
+`https-dns-proxy` does not provide a way to bind an instance directly to a network interface. For per-WAN, per-destination, or per-process routing of outbound DNS queries on multi-WAN setups, [pbr](https://docs.openwrt.melmac.ca/pbr/) is generally the right tool.
+
 ## Using https-dns-proxy for ad-blocking
 
 There are some resolvers which offer customizable ad-blocking as part of their name resolution services, returning either NXDOMAIN (domain not found) or a local IP address for the domains in their ad/malware block-lists. This is one of the best ways to implement ad-blocking on OpenWrt if you don't want the fine-grained control over your block- and allow-lists with the minimal overhead on your router. Visit the following pages to learn more what customizable ad-blocking options are available from these resolvers:
