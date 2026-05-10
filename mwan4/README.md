@@ -215,20 +215,18 @@ mwan4 integrates with firewall4 by writing nftables rules into the shared `inet 
 
 ### Generated nft Files
 
-mwan4 generates persistent nftables rule files that are loaded by fw4 via the `ruleset-post` mechanism:
+mwan4 generates two persistent nftables files that are loaded by fw4 via the `ruleset-post` mechanism:
 
 | File | Description |
 |------|-------------|
-| `/usr/share/nftables.d/ruleset-post/10-mwan4-base.nft` | Base chains and sets: `mwan4_prerouting` (mangle hook), `mwan4_output` (route hook), `mwan4_ifaces_in`, `mwan4_rules`, connected/custom/dynamic IP sets for both IPv4 and IPv6. Created at startup. |
-| `/usr/share/nftables.d/ruleset-post/11-mwan4-interfaces.nft` | Per-interface chains (e.g. `mwan4_iface_in_wan_ipv4`, `mwan4_iface_in_wan_ipv6`). Each chain marks traffic from a specific interface/family with the interface's fwmark. Created on interface ifup. |
-| `/usr/share/nftables.d/ruleset-post/12-mwan4-strategies.nft` | Strategy chains (e.g. `mwan4_strategy_balanced_ipv4`). Each chain implements load balancing via `numgen random` or failover by setting fwmarks for the selected route. Rebuilt whenever interface status changes. |
-| `/usr/share/nftables.d/ruleset-post/13-mwan4-rules.nft` | User rule chains (`mwan4_rules_ipv4`, `mwan4_rules_ipv6`). Maps traffic matching criteria (dest/src IP, port, protocol) to strategy chains. Includes sticky session sets when configured. |
+| `/usr/share/nftables.d/ruleset-post/10-mwan4.nft` | Dynamic content rebuilt on hotplug events. Combines base chains and sets (`mwan4_prerouting`, `mwan4_output`, `mwan4_ifaces_in`, connected/custom/dynamic IP sets for both IPv4 and IPv6), per-interface chains (e.g. `mwan4_iface_in_wan_ipv4`, `mwan4_iface_in_wan_ipv6`), and strategy chains (e.g. `mwan4_strategy_balanced_ipv4`). |
+| `/usr/share/nftables.d/ruleset-post/11-mwan4-rules.nft` | User rule chains (`mwan4_rules_ipv4`, `mwan4_rules_ipv6`) that map traffic matching criteria (dest/src IP, port, protocol) to strategy chains. Generated at init time and includes sticky session sets when configured. |
 
-### Runtime Temp Files
+### Runtime Temp File
 
 | File | Description |
 |------|-------------|
-| `/var/run/mwan4.nft` | Temporary nft file prefix used during atomic rule generation. Individual operations append suffixes (e.g. `.strategy_balanced_ipv4`, `.user_rules`, `.rule_*_sticky`, `.connected_v4`, `.custom_sets`). Cleaned up after each operation. |
+| `/var/run/mwan4.nft.combined` | Temporary file used to validate the combined ruleset (`nft -c -f`) before installing the per-target files. Removed after each operation. |
 
 ### nftables Chain Naming
 
