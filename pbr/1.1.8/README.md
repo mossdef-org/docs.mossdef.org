@@ -988,7 +988,7 @@ If you want to encrypt the files before sharing them, you can do so with the com
 
 ```ssh
 openssl rand 214 > /tmp/keyfile.key
-wget -O /tmp/dev.melmac.ca.pem https://dev.melmac.ca/repo/dev.melmac.ca.pem
+wget -O /tmp/dev.melmac.ca.pem https://dev.melmac.ca/apk/dev.melmac.ca.pem
 openssl pkeyutl -encrypt -inkey /tmp/dev.melmac.ca.pem -pubin -in /tmp/keyfile.key -out /tmp/keyfile.enc
 openssl enc -in /etc/config/dhcp -out /tmp/dhcp.enc -e -aes256 -pbkdf2 -kfile /tmp/keyfile.key
 openssl enc -in /etc/config/firewall -out /tmp/firewall.enc -e -aes256 -pbkdf2 -kfile /tmp/keyfile.key
