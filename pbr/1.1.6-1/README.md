@@ -120,7 +120,7 @@ The package-specific files that `pbr-iptables` installs are:
 
 ## <a name='Description'></a>Description
 
-This service allows you to define rules (policies) for routing traffic via WAN or your L2TP, OpenConnect, OpenVPN, PPTP, Softether or WireGuard tunnels. Policies can be set based on any combination of local/remote ports, local/remote IPv4 or IPv6 addresses/subnets or domains. This service supersedes and obsoletes the `VPN Bypass` ([README at GitHub](https://docs.openwrt.melmac.net/vpnbypass/)/[README at jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/vpnbypass/README.md)) and `VPN Policy Routing` ([README at GitHub](https://docs.openwrt.melmac.net/vpn-policy-routing/)/[README at jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/vpn-policy-routing/README.md)) services. For information on transition from `vpn-policy-routing` package please read about [differences](#AWordAboutDifferencesfromvpn-policy-routing) and [migration](#AWordAboutMigratingfromvpn-policy-routing).
+This service allows you to define rules (policies) for routing traffic via WAN or your L2TP, OpenConnect, OpenVPN, PPTP, Softether or WireGuard tunnels. Policies can be set based on any combination of local/remote ports, local/remote IPv4 or IPv6 addresses/subnets or domains. This service supersedes and obsoletes the `VPN Bypass` ([README at GitHub](https://docs.mossdef.org/vpnbypass/)/[README at jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/vpnbypass/README.md)) and `VPN Policy Routing` ([README at GitHub](https://docs.mossdef.org/vpn-policy-routing/)/[README at jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/vpn-policy-routing/README.md)) services. For information on transition from `vpn-policy-routing` package please read about [differences](#AWordAboutDifferencesfromvpn-policy-routing) and [migration](#AWordAboutMigratingfromvpn-policy-routing).
 
 ## <a name='Features'></a>Features
 
@@ -205,31 +205,31 @@ If you want to create your own custom user files, please refer to [Processing Cu
 
 Service Status
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/01-status.png "Service Status")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/01-status.png "Service Status")
 
 Configuration - Basic Configuration
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/02-config-basic.png "Basic Configuration")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/02-config-basic.png "Basic Configuration")
 
 Configuration - Advanced Configuration
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/03-config-advanced.png "Advanced Configuration")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/03-config-advanced.png "Advanced Configuration")
 
 Configuration - WebUI Configuration
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/04-config-webui.png "WebUI Configuration")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/04-config-webui.png "WebUI Configuration")
 
 Policies
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/05-policies.png "Policies")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/05-policies.png "Policies")
 
 DSCP Tagging
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/06-dscp-tag.png "DSCP Tagging")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/06-dscp-tag.png "DSCP Tagging")
 
 Custom User File Includes
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/07-custom-user-files.png "Custom User File Includes")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/07-custom-user-files.png "Custom User File Includes")
 
 ## <a name='HowItWorks'></a>How It Works
 
@@ -324,7 +324,7 @@ opkg install pbr luci-app-pbr
 
 ### <a name='HowToInstall-OpenWrt21.02andolder'></a>How To Install - OpenWrt 21.02 and older
 
-First, add my repo to your router following instructions at the [How to Use Section of repo documentation](https://docs.openwrt.melmac.net/#how-to-use).
+First, add my repo to your router following instructions at the [How to Use Section of repo documentation](https://docs.mossdef.org/#how-to-use).
 
 Then, please make sure that the [requirements](#Requirementspbr-iptables) are satisfied and install `pbr-iptables` and `luci-app-pbr` from Web UI or connect to your router via ssh and run the following commands:
 
@@ -1021,7 +1021,7 @@ To unset a WireGuard tunnel as default route, set the following to the appropria
   option route_allowed_ips '0'
   ```
 
-- Routing WireGuard traffic may require setting `net.ipv4.conf.wg0.rp_filter = 2` in `/etc/sysctl.conf`. Please refer to [issue #41](https://github.com/stangri/source.openwrt.melmac.net/issues/41) for more details.
+- Routing WireGuard traffic may require setting `net.ipv4.conf.wg0.rp_filter = 2` in `/etc/sysctl.conf`. Please refer to [issue #41](https://github.com/stangri/source.mossdef.org/issues/41) for more details.
 
 ### <a name='AWordAboutCloudflares1.1.1.1App'></a>A Word About Cloudflare's 1.1.1.1 App
 
@@ -1035,9 +1035,9 @@ If you just use the private DNS queries (WARP), [A Word About DNS-over-HTTPS](#A
 
 Some browsers, like [Mozilla Firefox](https://support.mozilla.org/en-US/kb/firefox-dns-over-https#w_about-dns-over-https) or [Google Chrome/Chromium](https://blog.chromium.org/2019/09/experimenting-with-same-provider-dns.html) have [DNS-over-HTTPS proxy](https://en.wikipedia.org/wiki/DNS_over_HTTPS) built-in. Their requests to web-sites listed in policies cannot be properly routed if the `resolver_set` is set to either `dnsmasq.ipset` or `dnsmasq.nftset`. To fix this, you can try either of the following:
 
-1.  Disable the DNS-over-HTTPS support in your browser and use the OpenWrt's `net/https-dns-proxy` (README on [GitHub](https://docs.openwrt.melmac.net/https-dns-proxy)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/https-dns-proxy/)) package with optional `https-dns-proxy` WebUI/luci app. You can then continue to use either `dnsmasq.ipset` or `dnsmasq.nftset` setting for the `resolver_set` in Policy-Based Routing.
+1.  Disable the DNS-over-HTTPS support in your browser and use the OpenWrt's `net/https-dns-proxy` (README on [GitHub](https://docs.mossdef.org/https-dns-proxy)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/https-dns-proxy/)) package with optional `https-dns-proxy` WebUI/luci app. You can then continue to use either `dnsmasq.ipset` or `dnsmasq.nftset` setting for the `resolver_set` in Policy-Based Routing.
 
-2.  Continue using DNS-over-HTTPS in your browser (which, by the way, also limits your options for router-level AdBlocking as described in `net/adblock-fast` README on [GitHub](https://docs.openwrt.melmac.net/adblock-fast/#dns-resolution-option)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/adblock-fast/README.md#dns-resolution-option)), you than would either have to switch the `resolver_set` to `none`. Please note, you will lose all the benefits of [`dnsmasq.ipset`](#UseDNSMASQipsetSupport) option.
+2.  Continue using DNS-over-HTTPS in your browser (which, by the way, also limits your options for router-level AdBlocking as described in `net/adblock-fast` README on [GitHub](https://docs.mossdef.org/adblock-fast/#dns-resolution-option)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/adblock-fast/README.md#dns-resolution-option)), you than would either have to switch the `resolver_set` to `none`. Please note, you will lose all the benefits of [`dnsmasq.ipset`](#UseDNSMASQipsetSupport) option.
 
 ### <a name='AWordAboutHTTP3QUIC'></a>A Word About HTTP/3 (QUIC)
 
@@ -1064,7 +1064,7 @@ If the VPN tunnel is not used as a default gateway on your router, you should no
 If the VPN tunnel is used as a default gateway, either:
 
 - send ALL traffic from your multimedia devices (by using their IP addresses or device names in the `src_addr` option in config file or Local addresses /devices field in WebUI) accessing Netflix/Amazon Prime/Hulu to WAN; this is the more reliable and recommended method.
-- use the [Netflix/AWS custom user files](https://docs.openwrt.melmac.net/pbr/#custom-user-files) in combination with the [Netflix](https://docs.openwrt.melmac.net/pbr/#NetflixDomains)/Amazon Prime/Hulu domains and `dnsmasq.ipset`/`dnsmasq.nftset` option to route traffic to Netflix/Amazon via WAN; this is definitely less reliable method and may not work in all regions.
+- use the [Netflix/AWS custom user files](https://docs.mossdef.org/pbr/#custom-user-files) in combination with the [Netflix](https://docs.mossdef.org/pbr/#NetflixDomains)/Amazon Prime/Hulu domains and `dnsmasq.ipset`/`dnsmasq.nftset` option to route traffic to Netflix/Amazon via WAN; this is definitely less reliable method and may not work in all regions.
 
 Either way make sure that your DNS requests are not routed via VPN Tunnel!
 

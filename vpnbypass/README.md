@@ -6,11 +6,11 @@
 
 ## Statement about OpenWrt 22.03 and this package
 
-The OpenWrt 22.03 release brought the use of `nft` instead of `iptables` and this package heavily depends on `iptables`. Due to this, I have created the new package: [`pbr`](https://docs.openwrt.melmac.net/pbr/) and in the OpenWrt 22.03 (and newer) the `pbr` has replaced both `vpn-policy-routing` and `vpnbypass` packages in OpenWrt repositories.
+The OpenWrt 22.03 release brought the use of `nft` instead of `iptables` and this package heavily depends on `iptables`. Due to this, I have created the new package: [`pbr`](https://docs.mossdef.org/pbr/) and in the OpenWrt 22.03 (and newer) the `pbr` has replaced both `vpn-policy-routing` and `vpnbypass` packages in OpenWrt repositories.
 
 As the `vpnbypass` package is now obsolete in the current OpenWrt development and latest release branches, no further updates nor development will happen.
 
-If you need a policy-based routing on an OpenWrt older than 22.03, I would recommend you [install the `pbr-iptables` package from my personal repo](https://docs.openwrt.melmac.net/pbr/#how-to-install---openwrt-2102-and-older).
+If you need a policy-based routing on an OpenWrt older than 22.03, I would recommend you [install the `pbr-iptables` package from my personal repo](https://docs.mossdef.org/pbr/#how-to-install---openwrt-2102-and-older).
 
 ## Description
 
@@ -28,7 +28,7 @@ A simple [procd](https://openwrt.org/docs/techref/procd)-based `vpnbypass` servi
 
 ## Screenshot (luci-app-vpnbypass)
 
-![screenshot](https://docs.openwrt.melmac.net/vpnbypass/screenshots/screenshot02.png "screenshot")
+![screenshot](https://docs.mossdef.org/vpnbypass/screenshots/screenshot02.png "screenshot")
 
 ## Requirements
 
@@ -73,7 +73,7 @@ opkg update
 opkg install vpnbypass luci-app-vpnbypass
 ```
 
-If these packages are not found in the official feed/repo for your version of OpenWrt, you will need to add a custom repo to your router following instructions on [GitHub](https://docs.openwrt.melmac.net/#on-your-router)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/README.md#on-your-router) first.
+If these packages are not found in the official feed/repo for your version of OpenWrt, you will need to add a custom repo to your router following instructions on [GitHub](https://docs.mossdef.org/#on-your-router)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/README.md#on-your-router) first.
 
 These packages have been designed to be backwards compatible with OpenWrt 19.07, OpenWrt 18.06, OpenWrt Project 17.01 and OpenWrt 15.05. However, on systems older than OpenWrt 18.06.6 and/or a system which has deviated too far (or haven't been updated to keep in-sync) with official OpenWrt release you may get a message about missing `luci-compat` dependency, which (and only which) you can safely ignore and force-install the luci app using `opkg install --force-depends` command instead of `opkg install`.
 

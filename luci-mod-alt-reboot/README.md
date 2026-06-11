@@ -30,7 +30,7 @@ opkg update
 opkg --force-overwrite install luci-mod-alt-reboot
 ```
 
-If the `luci-mod-alt-reboot` package is not found in the official feed/repo for your version of OpenWrt, you will need to add a custom repo to your router following instructions on [GitHub](https://docs.openwrt.melmac.net/#on-your-router)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/README.md#on-your-router) first.
+If the `luci-mod-alt-reboot` package is not found in the official feed/repo for your version of OpenWrt, you will need to add a custom repo to your router following instructions on [GitHub](https://docs.mossdef.org/#on-your-router)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/README.md#on-your-router) first.
 
 ## How to uninstall
 

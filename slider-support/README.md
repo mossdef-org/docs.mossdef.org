@@ -5,7 +5,7 @@
 
 ## Description
 
-This service enables switching between `Router`, `Access Point` and `Wireless Repeater` modes of operation for supported routers equipped with the slider switch. It also sets the correct `current mode` setting for the `WLAN Blinker` service available on [GitHub](https://docs.openwrt.melmac.net/wlanblinker/)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/wlanblinker/README.md).
+This service enables switching between `Router`, `Access Point` and `Wireless Repeater` modes of operation for supported routers equipped with the slider switch. It also sets the correct `current mode` setting for the `WLAN Blinker` service available on [GitHub](https://docs.mossdef.org/wlanblinker/)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/wlanblinker/README.md).
 
 ## Supported Routers
 
@@ -31,7 +31,7 @@ Please make sure that the [requirements](#requirements) are satisfied and instal
 -   GL-Inet AR750: `opkg update; opkg install slider-support-ar750;`.
 -   GL-Inet MT300N: `opkg update; opkg install slider-support-mt300n;`.
 
-If these packages are not found in the official feed/repo for your version of OpenWrt, you will need to add a custom repo to your router following instructions on [GitHub](https://docs.openwrt.melmac.net/#on-your-router)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/README.md#on-your-router) first.
+If these packages are not found in the official feed/repo for your version of OpenWrt, you will need to add a custom repo to your router following instructions on [GitHub](https://docs.mossdef.org/#on-your-router)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/README.md#on-your-router) first.
 
 These packages have been designed to be backwards compatible with OpenWrt 19.07, OpenWrt 18.06, OpenWrt Project 17.01 and OpenWrt 15.05. However, on systems older than OpenWrt 18.06.6 and/or a system which has deviated too far (or haven't been updated to keep in-sync) with official OpenWrt release you may get a message about missing `luci-compat` dependency, which (and only which) you can safely ignore and force-install the luci app using `opkg install --force-depends` command instead of `opkg install`.
 
@@ -41,7 +41,7 @@ While not required, the `travelmate` package available on [GitHub](https://githu
 
 ### Thanks
 
-Support for AR150 has been implemented based on [code](https://github.com/stangri/source.openwrt.melmac.net/issues/114) provided by [@mantheman](https://github.com/mantheman).
+Support for AR150 has been implemented based on [code](https://github.com/stangri/source.mossdef.org/issues/114) provided by [@mantheman](https://github.com/mantheman).
 
 <!-- markdownlint-disable MD033 -->
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "911798f2c34b45338f8f8182830a3eb6"}'></script>

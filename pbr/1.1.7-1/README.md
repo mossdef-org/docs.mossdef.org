@@ -102,7 +102,7 @@
 
 ## <a name='Description'></a>Description
 
-This service allows you to define rules (policies) for routing traffic via WAN or your L2TP, OpenConnect, OpenVPN, PPTP, Softether or WireGuard tunnels. Policies can be set based on any combination of local/remote ports, local/remote IPv4 or IPv6 addresses/subnets or domains. This service supersedes and obsoletes the `VPN Bypass` ([README at GitHub](https://docs.openwrt.melmac.net/vpnbypass/)/[README at jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/vpnbypass/README.md)) and `VPN Policy Routing` ([README at GitHub](https://docs.openwrt.melmac.net/vpn-policy-routing/)/[README at jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/vpn-policy-routing/README.md)) services.
+This service allows you to define rules (policies) for routing traffic via WAN or your L2TP, OpenConnect, OpenVPN, PPTP, Softether or WireGuard tunnels. Policies can be set based on any combination of local/remote ports, local/remote IPv4 or IPv6 addresses/subnets or domains. This service supersedes and obsoletes the `VPN Bypass` ([README at GitHub](https://docs.mossdef.org/vpnbypass/)/[README at jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/vpnbypass/README.md)) and `VPN Policy Routing` ([README at GitHub](https://docs.mossdef.org/vpn-policy-routing/)/[README at jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/vpn-policy-routing/README.md)) services.
 
 ## <a name='Features'></a>Features
 
@@ -185,31 +185,31 @@ If you want to create your own custom user files, please refer to [Processing Cu
 
 Service Status
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/01-status.png "Service Status")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/01-status.png "Service Status")
 
 Configuration - Basic Configuration
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/02-config-basic.png "Basic Configuration")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/02-config-basic.png "Basic Configuration")
 
 Configuration - Advanced Configuration
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/03-config-advanced.png "Advanced Configuration")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/03-config-advanced.png "Advanced Configuration")
 
 Configuration - WebUI Configuration
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/04-config-webui.png "WebUI Configuration")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/04-config-webui.png "WebUI Configuration")
 
 Policies
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/05-policies.png "Policies")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/05-policies.png "Policies")
 
 DSCP Tagging
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/06-dscp-tag.png "DSCP Tagging")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/06-dscp-tag.png "DSCP Tagging")
 
 Custom User File Includes
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/07-custom-user-files.png "Custom User File Includes")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/07-custom-user-files.png "Custom User File Includes")
 
 ## <a name='HowItWorks'></a>How It Works
 
@@ -923,7 +923,7 @@ To unset a WireGuard tunnel as default route, set the following to the appropria
   option route_allowed_ips '0'
   ```
 
-- Routing WireGuard traffic may require setting `net.ipv4.conf.wg0.rp_filter = 2` in `/etc/sysctl.conf`. Please refer to [issue #41](https://github.com/stangri/source.openwrt.melmac.net/issues/41) for more details.
+- Routing WireGuard traffic may require setting `net.ipv4.conf.wg0.rp_filter = 2` in `/etc/sysctl.conf`. Please refer to [issue #41](https://github.com/stangri/source.mossdef.org/issues/41) for more details.
 
 ### <a name='AWordAboutCloudflares1.1.1.1App'></a>A Word About Cloudflare's 1.1.1.1 App
 
@@ -937,9 +937,9 @@ If you just use the private DNS queries (WARP), [A Word About DNS-over-HTTPS](#A
 
 Some browsers, like [Mozilla Firefox](https://support.mozilla.org/en-US/kb/firefox-dns-over-https#w_about-dns-over-https) or [Google Chrome/Chromium](https://blog.chromium.org/2019/09/experimenting-with-same-provider-dns.html) have [DNS-over-HTTPS proxy](https://en.wikipedia.org/wiki/DNS_over_HTTPS) built-in. Their requests to web-sites listed in policies cannot be properly routed if the `resolver_set` is set to `dnsmasq.nftset`. To fix this, you can try either of the following:
 
-1.  Disable the DNS-over-HTTPS support in your browser and use the OpenWrt's `net/https-dns-proxy` (README on [GitHub](https://docs.openwrt.melmac.net/https-dns-proxy)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/https-dns-proxy/)) package with optional `luci-app-https-dns-proxy` WebUI/luci app. You can then continue to use `dnsmasq.nftset` setting for the `resolver_set` in Policy-Based Routing.
+1.  Disable the DNS-over-HTTPS support in your browser and use the OpenWrt's `net/https-dns-proxy` (README on [GitHub](https://docs.mossdef.org/https-dns-proxy)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/https-dns-proxy/)) package with optional `luci-app-https-dns-proxy` WebUI/luci app. You can then continue to use `dnsmasq.nftset` setting for the `resolver_set` in Policy-Based Routing.
 
-2.  Continue using DNS-over-HTTPS in your browser (which, by the way, also limits your options for router-level AdBlocking as described in `net/adblock-fast` README on [GitHub](https://docs.openwrt.melmac.net/adblock-fast/#dns-resolution-option)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/adblock-fast/README.md#dns-resolution-option)), you than would either have to switch the `resolver_set` to `none`. Please note, you will lose all the benefits of the [Resolver Set Support](#UseResolversSetSupport) option.
+2.  Continue using DNS-over-HTTPS in your browser (which, by the way, also limits your options for router-level AdBlocking as described in `net/adblock-fast` README on [GitHub](https://docs.mossdef.org/adblock-fast/#dns-resolution-option)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/adblock-fast/README.md#dns-resolution-option)), you than would either have to switch the `resolver_set` to `none`. Please note, you will lose all the benefits of the [Resolver Set Support](#UseResolversSetSupport) option.
 
 ### <a name='AWordAboutHTTP3QUIC'></a>A Word About HTTP/3 (QUIC)
 

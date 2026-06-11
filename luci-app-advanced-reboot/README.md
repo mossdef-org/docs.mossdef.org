@@ -54,7 +54,7 @@ The package in the official OpenWrt repo only supports the routers supported in 
 
 ## Screenshot (luci-app-advanced-reboot)
 
-![screenshot](https://docs.openwrt.melmac.net/luci-app-advanced-reboot/screenshots/screenshot02.png "screenshot")
+![screenshot](https://docs.mossdef.org/luci-app-advanced-reboot/screenshots/screenshot02.png "screenshot")
 
 ## How to install
 
@@ -65,7 +65,7 @@ opkg update
 opkg install luci-app-advanced-reboot
 ```
 
-If the `luci-app-advanced-reboot` package with support of your device is not found in the official feed/repo for your version of OpenWrt, you will need to add a custom repo to your router following instructions on [GitHub](https://docs.openwrt.melmac.net/#on-your-router)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/README.md#on-your-router) first.
+If the `luci-app-advanced-reboot` package with support of your device is not found in the official feed/repo for your version of OpenWrt, you will need to add a custom repo to your router following instructions on [GitHub](https://docs.mossdef.org/#on-your-router)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/README.md#on-your-router) first.
 
 ## How to add a new device
 

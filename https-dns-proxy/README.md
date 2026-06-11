@@ -43,7 +43,7 @@
 
 ## Description
 
-A lightweight, RFC8484-compatible DNS-over-HTTPS (DoH) proxy service for OpenWrt with minimal footprint and seamless integration. It does not support outdated JSON API (by design), keeping the package lean and fast. The optional Web UI (`luci-app-https-dns-proxy`) provides access to an extensive built-in list of [more than 40 public DoH resolvers](https://github.com/stangri/source.openwrt.melmac.net/tree/master/luci-app-https-dns-proxy/root/usr/share/https-dns-proxy/providers) for easy configuration. Based on [@aarond10](https://github.com/aarond10)'s [https-dns-proxy](https://github.com/aarond10/https_dns_proxy).
+A lightweight, RFC8484-compatible DNS-over-HTTPS (DoH) proxy service for OpenWrt with minimal footprint and seamless integration. It does not support outdated JSON API (by design), keeping the package lean and fast. The optional Web UI (`luci-app-https-dns-proxy`) provides access to an extensive built-in list of [more than 40 public DoH resolvers](https://github.com/stangri/source.mossdef.org/tree/master/luci-app-https-dns-proxy/root/usr/share/https-dns-proxy/providers) for easy configuration. Based on [@aarond10](https://github.com/aarond10)'s [https-dns-proxy](https://github.com/aarond10/https_dns_proxy).
 
 Key advantages:
 
@@ -59,21 +59,21 @@ Key advantages:
 - Compact size (about 40Kb installed).
 - (By default) automatically updates `dnsmasq` settings to use DoH proxy when it's started and reverts to old `dnsmasq` resolvers when DoH proxy is stopped.
 - (By default) automatically adds records for canary domains[<sup>1</sup>](https://support.mozilla.org/en-US/kb/canary-domain-use-application-dnsnet)<sup>,</sup>[<sup>2</sup>](https://developer.apple.com/support/prepare-your-network-for-icloud-private-relay) upon start and removes them upon service stop.
-- Web UI (`luci-app-https-dns-proxy`) available. [More than 40 public resolvers](https://github.com/stangri/source.openwrt.melmac.net/tree/master/luci-app-https-dns-proxy/root/usr/share/https-dns-proxy/providers) are supported within the WebUI for easy configuration.
+- Web UI (`luci-app-https-dns-proxy`) available. [More than 40 public resolvers](https://github.com/stangri/source.mossdef.org/tree/master/luci-app-https-dns-proxy/root/usr/share/https-dns-proxy/providers) are supported within the WebUI for easy configuration.
 
 ## Screenshots (luci-app-https-dns-proxy)
 
 Service Status
 
-![screenshot](https://docs.openwrt.melmac.net/https-dns-proxy/screenshots/screenshot02-status.png "Service Status")
+![screenshot](https://docs.mossdef.org/https-dns-proxy/screenshots/screenshot02-status.png "Service Status")
 
 Service Configuration
 
-![screenshot](https://docs.openwrt.melmac.net/https-dns-proxy/screenshots/screenshot02-config.png "Service Configuration")
+![screenshot](https://docs.mossdef.org/https-dns-proxy/screenshots/screenshot02-config.png "Service Configuration")
 
 Service Instances
 
-![screenshot](https://docs.openwrt.melmac.net/https-dns-proxy/screenshots/screenshot02-instances.png "Service Instances")
+![screenshot](https://docs.mossdef.org/https-dns-proxy/screenshots/screenshot02-instances.png "Service Instances")
 
 ## Requirements
 
@@ -85,7 +85,7 @@ Some resolvers may require `HTTP/2`. By default, `HTTP/2` is supported by `curl`
 
 ### HTTP/3 (QUIC) Support
 
-As of OpenWrt version 24.10, the OpenWrt installation/repositories do not contain packages required for HTTP/3 support. However the `luci-app-https-dns-proxy` has facilities for marking some pre-configured providers as `HTTP/3` only and can detect the `HTTP/3` support on the OpenWrt device. You can compile `curl` with `HTTP/3` support using the out-of-tree fork of `OpenSSL`, additional information is available in [curl README](https://docs.openwrt.melmac.net/curl/).
+As of OpenWrt version 24.10, the OpenWrt installation/repositories do not contain packages required for HTTP/3 support. However the `luci-app-https-dns-proxy` has facilities for marking some pre-configured providers as `HTTP/3` only and can detect the `HTTP/3` support on the OpenWrt device. You can compile `curl` with `HTTP/3` support using the out-of-tree fork of `OpenSSL`, additional information is available in [curl README](https://docs.mossdef.org/curl/).
 
 ## Unmet Dependencies
 
@@ -256,7 +256,7 @@ option source_addr '203.0.113.10'
 
 The configured IP must currently be assigned to an interface on the router; the package does not automatically re-evaluate `source_addr` if the interface's IP changes (e.g. DHCP renewal with a new lease).
 
-`https-dns-proxy` does not provide a way to bind an instance directly to a network interface. For per-WAN, per-destination, or per-process routing of outbound DNS queries on multi-WAN setups, [pbr](https://docs.openwrt.melmac.ca/pbr/) is generally the right tool.
+`https-dns-proxy` does not provide a way to bind an instance directly to a network interface. For per-WAN, per-destination, or per-process routing of outbound DNS queries on multi-WAN setups, [pbr](https://docs.mossdef.org/pbr/) is generally the right tool.
 
 ## Using https-dns-proxy for ad-blocking
 
@@ -273,7 +273,7 @@ If you're using both ad-blocking and non-blocking resolvers and want the ad-bloc
 
 If you have any questions about setting up `https-dns-proxy` for use with any of the above customizable ad-blocker resolvers, feel free to post in the OpenWrt forum using the link in the [Getting Help](#getting-help) section below.
 
-If you do want full control over your block- and allow-lists with the minimal footprint package on your router, use the [adblock-fast](https://docs.openwrt.melmac.net/adblock-fast/) package and its WebUI: `luci-app-adblock-fast`.
+If you do want full control over your block- and allow-lists with the minimal footprint package on your router, use the [adblock-fast](https://docs.mossdef.org/adblock-fast/) package and its WebUI: `luci-app-adblock-fast`.
 
 ## <a name='Donate'></a>Donate
 

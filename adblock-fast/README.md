@@ -57,23 +57,23 @@ If you want an ad-blocking using pre-selected curated remote block-lists only, s
 
 Service Status
 
-![screenshot](https://docs.openwrt.melmac.net/adblock-fast/screenshots/screenshot10-status.png "Service Status")
+![screenshot](https://docs.mossdef.org/adblock-fast/screenshots/screenshot10-status.png "Service Status")
 
 Configuration - Basic Configuration
 
-![screenshot](https://docs.openwrt.melmac.net/adblock-fast/screenshots/screenshot10-config-basic.png "Configuration - Basic Configuration")
+![screenshot](https://docs.mossdef.org/adblock-fast/screenshots/screenshot10-config-basic.png "Configuration - Basic Configuration")
 
 Configuration - Advanced Configuration
 
-![screenshot](https://docs.openwrt.melmac.net/adblock-fast/screenshots/screenshot10-config-advanced.png "Configuration - Advanced Configuration")
+![screenshot](https://docs.mossdef.org/adblock-fast/screenshots/screenshot10-config-advanced.png "Configuration - Advanced Configuration")
 
 Allowed and Blocked Domains Management
 
-![screenshot](https://docs.openwrt.melmac.net/adblock-fast/screenshots/screenshot10-domains.png "Allowed and Blocked Domains Management")
+![screenshot](https://docs.mossdef.org/adblock-fast/screenshots/screenshot10-domains.png "Allowed and Blocked Domains Management")
 
 Allowed and Blocked Lists Management
 
-![screenshot](https://docs.openwrt.melmac.net/adblock-fast/screenshots/screenshot10-lists.png "Allowed and Blocked Lists Management")
+![screenshot](https://docs.mossdef.org/adblock-fast/screenshots/screenshot10-lists.png "Allowed and Blocked Lists Management")
 
 ## Requirements
 
@@ -130,7 +130,7 @@ Install `adblock-fast` and `luci-app-adblock-fast` packages from Web UI or run t
 opkg update; opkg install adblock-fast luci-app-adblock-fast
 ```
 
-If `adblock-fast` and `luci-app-adblock-fast` packages are not found in the official feed/repo for your version of OpenWrt, you will need to add a custom repo to your router following instructions on [GitHub](https://docs.openwrt.melmac.net/#on-your-router)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/README.md#on-your-router) first.
+If `adblock-fast` and `luci-app-adblock-fast` packages are not found in the official feed/repo for your version of OpenWrt, you will need to add a custom repo to your router following instructions on [GitHub](https://docs.mossdef.org/#on-your-router)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/README.md#on-your-router) first.
 
 ## Default Settings
 

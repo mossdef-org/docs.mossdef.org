@@ -1,6 +1,6 @@
-title: "Welcome to docs.openwrt.melmac.ca!"
+title: "Welcome to docs.mossdef.org!"
 description: "stangri's OpenWrt Packages Documentation."
-url: "https://docs.openwrt.melmac.ca"
+url: "https://docs.mossdef.org"
 header_pages:
   - adblock-fast/
   - https-dns-proxy/

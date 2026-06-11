@@ -7,7 +7,7 @@
 # Policy-Based Routing OpenWrt Package Documentation
 
 [![OpenWrt](https://img.shields.io/badge/OpenWrt-Compatible-blueviolet)](https://openwrt.org)
-[![Web UI](https://img.shields.io/badge/Web_UI-Available-blue)](https://docs.openwrt.melmac.net/pbr/)
+[![Web UI](https://img.shields.io/badge/Web_UI-Available-blue)](https://docs.mossdef.org/pbr/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-lightgrey)](https://github.com/stangri/pbr/blob/master/LICENSE)
 
 
@@ -322,31 +322,31 @@ If you want to create your own custom user files, please refer to [Processing Cu
 
 Service Status
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/01-status.png "Service Status")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/01-status.png "Service Status")
 
 Configuration - Basic Configuration
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/02-config-basic.png "Basic Configuration")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/02-config-basic.png "Basic Configuration")
 
 Configuration - Advanced Configuration
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/03-config-advanced.png "Advanced Configuration")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/03-config-advanced.png "Advanced Configuration")
 
 Configuration - WebUI Configuration
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/04-config-webui.png "WebUI Configuration")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/04-config-webui.png "WebUI Configuration")
 
 Policies
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/05-policies.png "Policies")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/05-policies.png "Policies")
 
 DSCP Tagging
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/06-dscp-tag.png "DSCP Tagging")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/06-dscp-tag.png "DSCP Tagging")
 
 Custom User File Includes
 
-![screenshot](https://docs.openwrt.melmac.net/pbr/screenshots/07-custom-user-files.png "Custom User File Includes")
+![screenshot](https://docs.mossdef.org/pbr/screenshots/07-custom-user-files.png "Custom User File Includes")
 
 ## How It Works
 
@@ -447,7 +447,7 @@ If you are running a development (trunk/snapshot) build of OpenWrt on your route
 
 ### How to upgrade to a most recent version
 
-If you're on OpenWrt 23.05, OpenWrt 24.10 or snapshots and have been advised to upgrade to a `pbr`/`luci-app-pbr` versions more recent than what's available in OpenWrt repositories, please [add my packages repository to your OpenWrt device](https://docs.openwrt.melmac.net/#OnyourOpenWrtdevice).
+If you're on OpenWrt 23.05, OpenWrt 24.10 or snapshots and have been advised to upgrade to a `pbr`/`luci-app-pbr` versions more recent than what's available in OpenWrt repositories, please [add my packages repository to your OpenWrt device](https://docs.mossdef.org/#OnyourOpenWrtdevice).
 
 ## How to use
 
@@ -1001,7 +1001,7 @@ To unset a WireGuard tunnel as default route, set the following to the appropria
   option route_allowed_ips '0'
   ```
 
-- Routing WireGuard traffic may require setting `net.ipv4.conf.wg0.rp_filter = 2` in `/etc/sysctl.conf`. Please refer to [issue #41](https://github.com/stangri/source.openwrt.melmac.net/issues/41) for more details.
+- Routing WireGuard traffic may require setting `net.ipv4.conf.wg0.rp_filter = 2` in `/etc/sysctl.conf`. Please refer to [issue #41](https://github.com/stangri/source.mossdef.org/issues/41) for more details.
 
 ### A Word About Cloudflare's 1.1.1.1 App
 
@@ -1015,9 +1015,9 @@ If you just use the private DNS queries (WARP), [A Word About DNS-over-HTTPS](#a
 
 Some browsers, like [Mozilla Firefox](https://support.mozilla.org/en-US/kb/firefox-dns-over-https#w_about-dns-over-https) or [Google Chrome/Chromium](https://blog.chromium.org/2019/09/experimenting-with-same-provider-dns.html) have [DNS-over-HTTPS proxy](https://en.wikipedia.org/wiki/DNS_over_HTTPS) built-in. Their requests to web-sites listed in policies cannot be properly routed if the `resolver_set` is set to `dnsmasq.nftset`. To fix this, you can try either of the following:
 
-1.  Disable the DNS-over-HTTPS support in your browser and use the OpenWrt's `net/https-dns-proxy` (README on [GitHub](https://docs.openwrt.melmac.net/https-dns-proxy)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/https-dns-proxy/)) package with optional `luci-app-https-dns-proxy` WebUI/luci app. You can then continue to use `dnsmasq.nftset` setting for the `resolver_set` in Policy-Based Routing.
+1.  Disable the DNS-over-HTTPS support in your browser and use the OpenWrt's `net/https-dns-proxy` (README on [GitHub](https://docs.mossdef.org/https-dns-proxy)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/https-dns-proxy/)) package with optional `luci-app-https-dns-proxy` WebUI/luci app. You can then continue to use `dnsmasq.nftset` setting for the `resolver_set` in Policy-Based Routing.
 
-2.  Continue using DNS-over-HTTPS in your browser (which, by the way, also limits your options for router-level AdBlocking as described in `net/adblock-fast` README on [GitHub](https://docs.openwrt.melmac.net/adblock-fast/#dns-resolution-option)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.openwrt.melmac.net/adblock-fast/README.md#dns-resolution-option)), you than would either have to switch the `resolver_set` to `none`. Please note, you will lose all the benefits of the [Resolver Set Support](#use-resolvers-set-support) option.
+2.  Continue using DNS-over-HTTPS in your browser (which, by the way, also limits your options for router-level AdBlocking as described in `net/adblock-fast` README on [GitHub](https://docs.mossdef.org/adblock-fast/#dns-resolution-option)/[jsDelivr](https://cdn.jsdelivr.net/gh/stangri/docs.mossdef.org/adblock-fast/README.md#dns-resolution-option)), you than would either have to switch the `resolver_set` to `none`. Please note, you will lose all the benefits of the [Resolver Set Support](#use-resolvers-set-support) option.
 
 ### A Word About HTTP/3 (QUIC)
 

@@ -22,7 +22,7 @@ opkg update
 opkg install antminer-monitor
 ```
 
-If these packages are not found in the official feed/repo for your version of OpenWrt, you will need to [add a custom repo to your router](https://docs.openwrt.melmac.net/#how-to-use) first.
+If these packages are not found in the official feed/repo for your version of OpenWrt, you will need to [add a custom repo to your router](https://docs.mossdef.org/#how-to-use) first.
 
 ## How to use
 
