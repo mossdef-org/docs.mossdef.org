@@ -47,6 +47,7 @@ Currently supported dual-firmware devices include:
 - Xiaomi AX3600
 - Xiaomi AX9000
 - ZyXEL NBG6817
+- ZyXEL WSM20 (see note below)
 
 If your device is not in the list above, however it is a [dual-firmware device](https://openwrt.org/tag/dual_firmware?do=showtag&tag=dual_firmware) and you're interested in having your device supported, please refer to [How to add a new device](#how-to-add-a-new-device).
 
@@ -207,6 +208,7 @@ After copying the file, log in to the router and test it using `ubus` commands.
 - The package in the official OpenWrt repo only supports the routers supported in the official snapshots or release builds. In rare cases, the package in my own private repo may support routers not yet supported in the package from the official OpenWrt repo.
 - When you reboot to a different partition, your current settings (WiFi SSID/password, etc.) will not apply to a different partition. Different partitions might have completely different settings and even firmware.
 - If you reboot to a partition which doesn't allow you to switch boot partitions (like stock vendor firmware), you might not be able to boot back to OpenWrt unless you reflash it, losing all the settings.
+- **ZyXEL WSM20**: unlike most supported devices, OpenWrt can only ever run from the first partition — its sysupgrade always flashes the first slot and forces the boot selector back to it. The second partition holds the stock (vendor) firmware. Switching to the second partition therefore boots stock ZyXEL firmware, which has no option to switch back. Your OpenWrt install is not erased (only a one-byte boot selector in the `persist` partition is changed), but to return to OpenWrt you must either re-flash OpenWrt through the OEM's hidden firmware-upgrade page (its sysupgrade resets the boot selector to the first slot) or use UART/U-Boot to set the boot selector back. Treat switching to the second partition on this device as effectively one-way unless you have UART access.
 - Some devices allow you to trigger reboot to an alternative partition by interrupting boot 3 times in a row (by resetting/switching off the device or pulling power). As these methods might be different for different devices, do your own homework.
 - Newer versions of this package try to mount alternative partition on compatible NAND routers in order to retrieve detailed firmware information. When that happens, it is normal to have messages similar to the below in the system log:
 
