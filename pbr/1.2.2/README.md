@@ -1182,9 +1182,9 @@ The `pbr` package now checks for incompatible DHCP Option 6 on start if resolver
 
 ### Warning: Unknown Gateway for device 'XX'
 
-This usually is a transient warning and related to `WARNING: Uplink/WAN interface is still down, going back to boot mode`.  
-When an interface is not up there is no gateway, normally PBR will restart if the interface is up and the warning should be gone.  
-So you can ignore this warning if PBR restarts afterwards and the warning is gone.
+This warning is usually transient and may occur, for example, when the WAN/uplink interface is still down during startup ("WARNING: Uplink/WAN interface is still down, going back to boot mode") or when an interface takes longer than usual to become available, such as an OpenVPN connection.  
+When an interface is not yet up, no gateway is available. In most cases, PBR will automatically restart once the interface comes up, and the warning will disappear.  
+You can safely ignore this warning if PBR restarts afterwards and the warning no longer appears.  
 
 ## Thanks
 
