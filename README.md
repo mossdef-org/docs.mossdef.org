@@ -2,7 +2,7 @@
 
 # The mossdef.org packages documentation
 
-This is documentation for packages for OpenWrt devices created/maintained under the Melmac Open Source Software Development Foundation (MOSSDeF). While some of these are packages are already available from official OpenWrt release/snapshots repositories/feeds, [the ipk packages repo](https://ipk.mossdef.org)/[the apk packages repo](https://apk.mossdef.org) usually contain newer versions. You can also browse/check-out the [source code](https://source.mossdef.org).
+This is documentation for packages for OpenWrt devices created/maintained under the Melmac Open Source Software Development Foundation (MOSSDeF). While some of these are packages are already available from official OpenWrt release/snapshots repositories/feeds, [the ipk packages repo](https://ipk.mossdef.org)/[the apk packages repo](https://repo.mossdef.org) usually contain newer versions. You can also browse/check-out the [source code](https://source.mossdef.org).
 
 
 - [The mossdef.org packages documentation](#the-mossdeforg-packages-documentation)
@@ -79,25 +79,27 @@ Please note that there may be delay in [jsDelivr CDN](https://cdn.jsdelivr.net/g
 
 #### <a name='OnyourOpenWrtdevicewithapk'></a>On your OpenWrt device with apk
 
-The apk binaries repository is currently hosted at [GitHub](https://github.com). If you have problems accessing [the MOSSDeF apk packages repo](https://apk.mossdef.org) or access to [GitHub](https://github.com) may be blocked at the location where your router is installed, skip to the [Add APK repository to your OpenWrt device (jsDelivr)](#add-apk-repository-to-your-openwrt-device-jsdelivr) section. Both repositories use HTTPS protocol and require one of the SSL support packages to be installed on your router.
+The apk binaries repository is currently hosted at [GitHub](https://github.com). If you have problems accessing [the MOSSDeF apk packages repo](https://repo.mossdef.org) or access to [GitHub](https://github.com) may be blocked at the location where your router is installed, skip to the [Add APK repository to your OpenWrt device (jsDelivr)](#add-apk-repository-to-your-openwrt-device-jsdelivr) section. Both repositories use HTTPS protocol and require one of the SSL support packages to be installed on your router.
 
 ##### Add APK repository to your OpenWrt device (GitHub)
 
 ```sh
-wget https://apk.mossdef.org/apk.mossdef.org.pem -O /etc/apk/keys/apk.mossdef.org.pem
-echo 'https://apk.mossdef.org/packages.adb' > /etc/apk/repositories.d/apk.mossdef.org.list
+wget https://repo.mossdef.org/repo.mossdef.org.pem -O /etc/apk/keys/repo.mossdef.org.pem
+echo "https://repo.mossdef.org/releases/25.12/$(cat /etc/apk/arch)/packages.adb" > /etc/apk/repositories.d/repo.mossdef.org.list
 apk update
 ```
 
 ##### Add APK repository to your OpenWrt device (jsDelivr)
 
 ```sh
-wget https://apk.mossdef.org/apk.mossdef.org.pem -O /etc/apk/keys/apk.mossdef.org.pem
-echo 'https://cdn.jsdelivr.net/gh/mossdef-org/apk.mossdef.org/packages.adb' > /etc/apk/repositories.d/apk.mossdef.org.list
+wget https://cdn.jsdelivr.net/gh/mossdef-org/repo.mossdef.org/repo.mossdef.org.pem -O /etc/apk/keys/repo.mossdef.org.pem
+echo "https://cdn.jsdelivr.net/gh/mossdef-org/repo.mossdef.org/releases/25.12/$(cat /etc/apk/arch)/packages.adb" > /etc/apk/repositories.d/repo.mossdef.org.list
 apk update
 ```
 
-Please note that there may be delay in [jsDelivr CDN](https://cdn.jsdelivr.net/gh/mossdef-org/apk.mossdef.org) cache updates comparing to [the MOSSDeF apk packages repo at GitHub](https://apk.mossdef.org) which may cause `apk` to pull older files and/or complain about wrong signature.
+Please note that there may be delay in [jsDelivr CDN](https://cdn.jsdelivr.net/gh/mossdef-org/repo.mossdef.org) cache updates comparing to [the MOSSDeF apk packages repo at GitHub](https://repo.mossdef.org) which may cause `apk` to pull older files and/or complain about wrong signature.
+
+The commands above read your architecture from `/etc/apk/arch` and use the `25.12` feed (OpenWrt 25.12 and newer use `apk`; 24.10 and earlier use `opkg`/`ipk` — see the opkg sections above). On **SNAPSHOT** builds this `25.12` feed still works for architecture-independent and userspace packages, but kernel modules from it will not load (kernel version mismatch).
 
 ### <a name='ImageBuilder'></a>Image Builder
 
@@ -137,22 +139,23 @@ sed -i '4 i\src/gz stangri_repo https://cdn.jsdelivr.net/gh/mossdef-org/ipk.moss
 
 #### <a name='ImageBuilderwithapk'></a>Image Builder with apk
 
-The apk binaries repository is currently hosted at [GitHub](https://github.com). If you have problems accessing [the MOSSDeF apk packages repo](https://apk.mossdef.org) or access to [GitHub](https://github.com) may be blocked at the location where your router is installed, skip to the [Add APK repository to Image Builder (jsDelivr)](#add-apk-repository-to-image-builder-jsdelivr) section.
+The apk binaries repository is currently hosted at [GitHub](https://github.com). If you have problems accessing [the MOSSDeF apk packages repo](https://repo.mossdef.org) or access to [GitHub](https://github.com) may be blocked at the location where your router is installed, skip to the [Add APK repository to Image Builder (jsDelivr)](#add-apk-repository-to-image-builder-jsdelivr) section.
 
 ##### Add APK repository to Image Builder (GitHub)
 
 Add the following line:
 
 ```sh
-https://apk.mossdef.org/packages.adb
+https://repo.mossdef.org/releases/25.12/<arch>/packages.adb
 ```
 
-to the `repositories` file inside your Image Builder directory. You can use the following shell script code to achieve that:
+to the `repositories` file inside your Image Builder directory (where `<arch>` matches your target, e.g. `aarch64_cortex-a53`). You can use the following shell script code to achieve that (it reads the arch from the Image Builder's `.config`):
 
 ```sh
-wget https://apk.mossdef.org/apk.mossdef.org.pem -O keys/apk.mossdef.org.pem
-sed -i '/apk.mossdef.org/d' repositories
-echo 'https://apk.mossdef.org/packages.adb' >> repositories
+wget https://repo.mossdef.org/repo.mossdef.org.pem -O keys/repo.mossdef.org.pem
+arch=$(sed -n 's/^CONFIG_TARGET_ARCH_PACKAGES="\(.*\)"/\1/p' .config)
+sed -i '/repo.mossdef.org/d' repositories
+echo "https://repo.mossdef.org/releases/25.12/${arch}/packages.adb" >> repositories
 ```
 
 ##### Add APK repository to Image Builder (jsDelivr)
@@ -160,15 +163,16 @@ echo 'https://apk.mossdef.org/packages.adb' >> repositories
 Add the following line:
 
 ```sh
-https://cdn.jsdelivr.net/gh/mossdef-org/apk.mossdef.org/packages.adb
+https://cdn.jsdelivr.net/gh/mossdef-org/repo.mossdef.org/releases/25.12/<arch>/packages.adb
 ```
 
-to the `repositories` file inside your Image Builder directory. You can use the following shell script code to achieve that:
+to the `repositories` file inside your Image Builder directory (where `<arch>` matches your target, e.g. `aarch64_cortex-a53`). You can use the following shell script code to achieve that (it reads the arch from the Image Builder's `.config`):
 
 ```sh
-wget https://apk.mossdef.org/apk.mossdef.org.pem -O keys/apk.mossdef.org.pem
-sed -i '/apk.mossdef.org/d' repositories
-echo 'https://cdn.jsdelivr.net/gh/mossdef-org/apk.mossdef.org/packages.adb' >> repositories
+wget https://cdn.jsdelivr.net/gh/mossdef-org/repo.mossdef.org/repo.mossdef.org.pem -O keys/repo.mossdef.org.pem
+arch=$(sed -n 's/^CONFIG_TARGET_ARCH_PACKAGES="\(.*\)"/\1/p' .config)
+sed -i '/repo.mossdef.org/d' repositories
+echo "https://cdn.jsdelivr.net/gh/mossdef-org/repo.mossdef.org/releases/25.12/${arch}/packages.adb" >> repositories
 ```
 
 ### <a name='SDK'></a>SDK
