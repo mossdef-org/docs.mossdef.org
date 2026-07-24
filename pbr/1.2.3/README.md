@@ -106,6 +106,7 @@
     - [Warning: Please set 'dhcp.lan.force=1'](#warning-please-set-dhcplanforce1)
     - [Warning: Internal Version Mismatch](#warning-internal-version-mismatch)
     - [Warning: Incompatible DHCP Option 6](#warning-incompatible-dhcp-option-6)
+    - [Warning: Unknown IPvX Gateway for device 'XX'](#warning-unknown-ipvx-gateway-for-device-xx)
   - [Thanks](#thanks)
 
 
