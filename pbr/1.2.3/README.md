@@ -1223,6 +1223,18 @@ If you have the matching versions of the `pbr` and `luci-app-pbr` installed you 
 
 The `pbr` package now checks for incompatible DHCP Option 6 on start if resolver_set is used.
 
+### Warning: Unknown IPvX Gateway for device 'XX'
+
+This warning indicates that an interface is enabled but is not yet operational.
+This often is a transient condition and may occur, for example, when the WAN/uplink interface is still down during startup (WARNING: Uplink/WAN interface is still down, going back to boot mode) or when an interface takes longer than usual to become available, such as an OpenVPN connection.
+When an interface is not yet up, no gateway is available. In most cases, PBR will automatically restart once the interface becomes available, and the warning will disappear.
+You can safely ignore this warning if PBR restarts successfully afterward and the warning no longer appears.
+
+If, however, the warning persists and no device is shown (Unknown Gateway for device: '), it indicates that an interface (device) is missing or not functioning correctly.
+You can verify this by running `ifconfig` from the command line to check whether the interface (device) is present.
+If you intentionally enabled an interface but did not configure it to start at boot, you can safely ignore the warning. 
+Alternatively, if the interface is not needed, it is recommended to disable it.
+
 ## Thanks
 
 I'd like to thank everyone who helped by providing testing and feedback on this service. Without contributions from [@hnyman](https://github.com/hnyman), [@dibdot](https://github.com/dibdot), [@danrl](https://github.com/danrl), [@tohojo](https://github.com/tohojo), [@cybrnook](https://github.com/cybrnook), [@nidstigator](https://github.com/nidstigator), [@AndreBL](https://github.com/AndreBL), [@dz0ny](https://github.com/dz0ny), [@tew42](https://github.com/tew42), [bogorad](https://forum.openwrt.org/u/bogorad), rigorous testing/bugreporting by [@dziny](https://github.com/dziny), [@bluenote73](https://github.com/bluenote73), [@buckaroo](https://github.com/pgera), [@Alexander-r](https://github.com/Alexander-r), [@n8v8R](https://github.com/n8v8R), [psherman](https://forum.openwrt.org/u/psherman), [@Vale-max](https://github.com/Vale-max), [@aliicex](https://github.com/aliicex), [dscpl](https://forum.openwrt.org/u/dscpl), [pesa1234](https://forum.openwrt.org/u/pesa1234) and multiple contributions from [@egc112](https://github.com/egc112), [@bigsmile74](https://github.com/bigsmile74), [@dl12345](https://github.com/dl12345) and [trendy](https://forum.openwrt.org/u/trendy) and feedback from other OpenWrt users it wouldn't have been possible. WireGuard/IPv6 support is courtesy of [IVPN](https://www.ivpn.net/).
