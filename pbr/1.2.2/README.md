@@ -1180,15 +1180,17 @@ If you have the matching versions of the `pbr` and `luci-app-pbr` installed you 
 
 The `pbr` package now checks for incompatible DHCP Option 6 on start if resolver_set is used.
 
-### Warning: Unknown Gateway for device 'XX'
+### Warning: Unknown IPvX Gateway for device 'XX'
 
 This warning indicates that an interface is enabled but is not yet operational.
-This is usually a transient condition and may occur, for example, when the WAN/uplink interface is still down during startup (WARNING: Uplink/WAN interface is still down, going back to boot mode) or when an interface takes longer than usual to become available, such as an OpenVPN connection.
+This often is a transient condition and may occur, for example, when the WAN/uplink interface is still down during startup (WARNING: Uplink/WAN interface is still down, going back to boot mode) or when an interface takes longer than usual to become available, such as an OpenVPN connection.
 When an interface is not yet up, no gateway is available. In most cases, PBR will automatically restart once the interface becomes available, and the warning will disappear.
 You can safely ignore this warning if PBR restarts successfully afterward and the warning no longer appears.
 
-If, however, the warning persists and no device is shown (Unknown Gateway for device ''), it indicates that an interface (device) is missing or not functioning correctly. You can verify this by running `ifconfig` from the command line to check whether the interface (device) is present.
-If you intentionally enabled an interface but did not configure it to start at boot, you can safely ignore the warning. Alternatively, if the interface is not needed, it is recommended to disable it.
+If, however, the warning persists and no device is shown (Unknown Gateway for device: '), it indicates that an interface (device) is missing or not functioning correctly.
+You can verify this by running `ifconfig` from the command line to check whether the interface (device) is present.  
+If you intentionally enabled an interface but did not configure it to start at boot, you can safely ignore the warning.  
+Alternatively, if the interface is not needed, it is recommended to disable it.  
 
 ## Thanks
 
