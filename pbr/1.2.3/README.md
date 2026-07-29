@@ -172,7 +172,7 @@ This package provides flexible, rule-based routing for OpenWrt — allowing you 
 - Tailscale tunnels supported (with device name tailscale\*).
 - Tor tunnels supported in nft mode only (interface name must match tor).
 - Wireguard tunnels supported (with protocol names wireguard\*).
-- IPsec (xfrm) tunnels supported, needs testing.  
+- IPsec (xfrm) tunnels supported, for routing purpose treated as a point-to-point link. needs testing.  
 In general all interfaces with a point-to-point (POINTOPOINT) link are supported but for those not explicitly mentioned you need to add the interface on Advanced configuration tab in Supported Interfaces.  
 
 ### Fw4 Include Nft File Mode
