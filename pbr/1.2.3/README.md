@@ -98,6 +98,8 @@
     - [A Word About Interface Hotplug Script](#a-word-about-interface-hotplug-script)
     - [A Word About Broken Domain Policies](#a-word-about-broken-domain-policies)
     - [A Word About Compatibility With Other Policy Routing Services](#a-word-about-compatibility-with-other-policy-routing-services)
+    - [A Word About uplink_ip_rules_priority](#a-word-about-uplink_ip_rules_priority)
+    - [A Word About the Maximum Number of Interfaces/Tunnels](#a-word-about-the-maximum-number-of-interfacestunnels)
   - [Getting Help](#getting-help)
   - [First Troubleshooting Step](#first-troubleshooting-step)
   - [Donate](#donate)
@@ -122,6 +124,12 @@ This README is relevant for the `pbr` version 1.2.3. If you're looking for the R
 - Support for custom user scripts in ucode, using pbr API.
 - This release will include support for mwan4 integration. More information on [mwan4 integration](#mwan4-integration) below.
 - The `status` command now shows a brief summary by default (routing mode and nft file paths). Use `-d` for detailed diagnostic output.
+- `xfrm` and other point-to-point interfaces are detected properly again, so gateway discovery no longer fails on them (ported from the shell 1.2.2 implementation).
+- A missing gateway on an otherwise-valid interface is reported as a **warning** rather than an error, and no longer forces a full service restart on an interface reload. See [Warning: Unknown IPvX Gateway for device 'XX'](#warning-unknown-ipvx-gateway-for-device-xx).
+- The accepted range of [uplink_ip_rules_priority](#uplink_ip_rules_priority) is `99`–`32765` (it was briefly raised to a floor of `1001`); values outside the range are clamped on load. See [A Word About uplink_ip_rules_priority](#a-word-about-uplink_ip_rules_priority).
+- DNS policies without an explicit `dest_dns_port` generate valid `nft` syntax again.
+- The `pbr` chain cleanup no longer touches `fw4`'s own `forward`/`output`/`dstnat` base chains, which could previously break LAN↔WAN forwarding and NAT port forwards.
+- Policies mixing negated and non-negated entries in `src_addr`/`dest_addr` (for example `!192.168.1.5 192.168.1.0/24`) are classified correctly.
 
 ### Version 1.2.2
 
@@ -534,9 +542,9 @@ As per screenshots above, in the Web UI the `pbr` configuration is split into `B
 | Advanced       | <a name="supported_interface"></a>supported_interface              | list/string    |                | Explicitly adds interfaces to be managed by `pbr` that might not be auto-detected, such as custom VPN tunnels or non-standard interfaces.                                                                                                                                                                                      |
 | Advanced       | <a name="ignored_interface"></a>ignored_interface                  | list/string    |                | Specifies a list of interfaces that `pbr` should completely ignore, effectively preventing any policy routing manipulation on them. For more information on WireGuard server use cases, please review [WireGuard Server Use Cases](#wireguard-server-use-cases).                                                               |
 | Advanced       | <a name="icmp_interface"></a>icmp_interface                        | string         |                | Forces all ICMP traffic (ping, traceroute) to use a specific interface, overriding default routing behavior for diagnostic traffic.                                                                                                                                                                                            |
-| Hidden         | <a name="uplink_ip_rules_priority"></a>uplink_ip_rules_priority    | integer        | 30000          | Defines the starting priority for `pbr`'s IP rules, allowing you to position `pbr` routing logic before or after other network services in the routing table. Must be between 1001 and 32765.                                                                                                                                  |
-| Advanced       | <a name="uplink_mark"></a>uplink_mark                              | hexadecimal    | 00010000       | Sets the specific firewall mark used by `pbr` to identify its traffic, which should be adjusted in conjunction with `fw_mask` to avoid conflicts with other services like SQM or QoS.                                                                                                                                          |
-| Advanced       | <a name="fw_mask"></a>fw_mask                                      | hexadecimal    | 00ff0000       | Sets the firewall mask applied to `pbr` traffic, defining the bitmask used for mark matching, and must be configured carefully alongside `uplink_mark`.                                                                                                                                                                        |
+| Hidden         | <a name="uplink_ip_rules_priority"></a>uplink_ip_rules_priority    | integer        | 30000          | Defines the starting priority for `pbr`'s IP rules, allowing you to position `pbr` routing logic before or after other network services in the routing table. Must be between 99 and 32765; out-of-range values are clamped and non-numeric values fall back to `30000`. See [A Word About uplink_ip_rules_priority](#a-word-about-uplink_ip_rules_priority) before lowering it.                                                                                                                                  |
+| Advanced       | <a name="uplink_mark"></a>uplink_mark                              | hexadecimal    | 00010000       | Sets the specific firewall mark used by `pbr` to identify its traffic, which should be adjusted in conjunction with `fw_mask` to avoid conflicts with other services like SQM or QoS. It is also the step size between per-interface marks — see [A Word About the Maximum Number of Interfaces/Tunnels](#a-word-about-the-maximum-number-of-interfacestunnels).                                                                                                                                          |
+| Advanced       | <a name="fw_mask"></a>fw_mask                                      | hexadecimal    | 00ff0000       | Sets the firewall mask applied to `pbr` traffic, defining the bitmask used for mark matching, and must be configured carefully alongside `uplink_mark`. Together with `uplink_mark` it caps how many interfaces `pbr` can manage — see [A Word About the Maximum Number of Interfaces/Tunnels](#a-word-about-the-maximum-number-of-interfacestunnels).                                                                                                                                                                        |
 | Web UI         | <a name="webui_show_ignore_target"></a>webui_show_ignore_target    | boolean        | 0              | Toggles the visibility of the 'ignore' target in the Web UI interface list, allowing for the creation of policies that explicitly bypass `pbr` processing.                                                                                                                                                                     |
 | Web UI         | <a name="webui_supported_protocol"></a>webui_supported_protocol    | list           |                | Defines the list of protocols displayed in the Web UI policies dropdown, allowing customization of the available protocol selection choices.                                                                                                                                                                                   |
 |                | <a name="interface_name_dscp"></a>{interface_name}\_dscp           | integer (1-63) |                | Dynamically enables [DSCP-tag based policies](#dscp-tag-based-policies) for the specified interface, allowing traffic prioritization based on DSCP tags for that specific uplink/WAN or tunnel/VPN connection.                                                                                                                   |
@@ -554,6 +562,9 @@ As per screenshots above, in the Web UI the `pbr` configuration is split into `B
 | Hidden         | <a name="nft_set_policy"></a>nft_set_policy                        | string         | performance    | Sets the memory policy for `nft` sets (e.g., 'performance' or 'memory'), allowing optimization based on your device's resources. See [nftables wiki](https://wiki.nftables.org/wiki-nftables/index.php/Sets) for details.                                                                                                      |
 | Hidden         | <a name="nft_set_timeout"></a>nft_set_timeout                      | string         |                | Defines the default timeout value for elements in `nft` sets, strictly used when the `nft_set_flags_timeout` option is enabled. See [nftables wiki](https://wiki.nftables.org/wiki-nftables/index.php/Sets) for details.                                                                                                       |
 | Hidden         | <a name="nft_user_set_counter"></a>nft_user_set_counter            | boolean        | 0              | Enables packet counting specifically for `nft` sets created from custom user files, aiding in debugging custom traffic rules. See [nftables wiki](https://wiki.nftables.org/wiki-nftables/index.php/Sets) for details.                                                                                                         |
+| Hidden         | <a name="nft_user_set_policy"></a>nft_user_set_policy                | string         |                | Sets the memory policy (`performance` or `memory`) for `nft` sets created from [custom user files](#custom-user-files). When empty, the `nft` default is used. See [nftables wiki](https://wiki.nftables.org/wiki-nftables/index.php/Sets) for details.                                                                        |
+| Hidden         | <a name="prefixlength"></a>prefixlength                            | integer        | 1              | Prefix length used for the `suppress_prefixlength` IP rule `pbr` installs on the `main` table, which makes the kernel skip default (and shorter-prefix) routes from `main` so `pbr`'s own tables can take over. Only change this if you understand `ip rule suppress_prefixlength`.                                             |
+| Hidden         | <a name="debug_performance"></a>debug_performance                  | boolean        | 0              | Emits `[PERF-DEBUG]` timing lines to the log for each phase of a start/reload (config load, environment detection, interface enumeration, policy processing, `nft` rule installation). Useful for diagnosing slow starts, noisy otherwise.                                                                                      |
 | Hidden         | <a name="netifd_enabled"></a>netifd_enabled                        | boolean        | 0              | Enables deep integration with `netifd`, allowing `pbr` to directly interact with OpenWrt's network interface daemon for more robust state management.                                                                                                                                                                          |
 | Hidden         | <a name="netifd_strict_enforcement"></a>netifd_strict_enforcement  | boolean        | 0              | Applies strict enforcement logic within the `netifd` integration context, ensuring traffic is dropped if the `netifd` interface is effectively down.                                                                                                                                                                           |
 | Hidden         | <a name="netifd_interface_default"></a>netifd_interface_default    | string         |                | Specifies the default IPv4 interface mapping for `netifd` integration, ensuring the service correctly identifies the primary WAN within `netifd` structures.                                                                                                                                                                   |
@@ -592,6 +603,7 @@ Each policy may have a combination of the options below, the `name`, the `src_ad
 | enabled      | 1       | Enable/disable DNS policy. To display the `Enable` checkbox column for policies in the WebUI, make sure to select `Enabled` for `Show Enable Column` in the `Web UI` tab.                                                                                                                                                                                                                                                                               |
 | **src_addr** |         | List of space-separated local/source IP addresses, CIDRs, hostnames or mac addresses (colon-separated). You can also specify a local physical device (like a specially created wlan) prepended by an `@` symbol. You can use URLs to list of addresses. If `curl` is installed you can use the `file://` schema, otherwise you can use `ftp://`, `http://` and `https://` schemas (which are obviously not compatible with the `secure_reload` option). |
 | **dest_dns** |         | List of space-separated IPv4/IPv6 addresses for resolvers used for the DNS policy or a network interface, which DNS server(s) will be used for the DNS policy.                                                                                                                                                                                                                                                                                          |
+| dest_dns_port |        | Destination port of the resolver the traffic is redirected to. When unset, the original destination port is preserved (which is what you want for the standard DNS port `53`); set it only when your resolver listens on a non-standard port.                                                                                                                                                                                                           |
 
 ### Custom User Files Include Options
 
@@ -1153,6 +1165,60 @@ Some examples on when the domain(s) policies defined in `pbr` may not work:
 ### A Word About Compatibility With Other Policy Routing Services
 
 Using `pbr` together with another policy routing service on the same system may or may not be possible, depending on how the other service works, and can lead to conflicts. One way to resolve those is changing the `uplink_ip_rules_priority` option. For example, setting it to `900` will allow using `pbr` for policy routing and `mwan3` for WAN failover or load balancing.
+
+### A Word About uplink_ip_rules_priority
+
+The [uplink_ip_rules_priority](#uplink_ip_rules_priority) option sets the **base** priority of the `ip rule` entries `pbr` installs. `pbr` does not use a single priority: it reserves a window of priorities *below* the configured base, one per possible marked interface. The size of that window is derived from [fw_mask](#fw_mask) divided by [uplink_mark](#uplink_mark) — with the defaults (`00ff0000` / `00010000`) that is 255 priorities. On start and on every reload `pbr` clears that whole window before re-adding its own rules.
+
+Two consequences worth knowing before you change the value:
+
+- **Do not set the base lower than the window size.** Accepted values are `99` to `32765`; anything outside that range is clamped on load, and a non-numeric value falls back to `30000`. Older versions of `pbr` 1.2.3 would let a low value push the cleanup window down to priority `0`, deleting the kernel's own `from all lookup local` rule and making the router stop answering on its own addresses. That is fixed — the window can no longer reach priority `0` — but a low base still means a wide window sitting near the bottom of the rule table.
+- **The cleanup removes every rule in the window, not just `pbr`'s.** Only `netifd`-owned `pbr` tables are exempt. If another service installs `ip rule` entries in that range, a `pbr` reload will remove them. For example `netbird` installs rules starting at priority `100`; with `uplink_ip_rules_priority=99` the window is `[1, 100]` and `netbird`'s rule is inside it. Check `ip rule show` (and `ip -6 rule show`) after a `pbr` restart if you run another service that manages IP rules.
+
+If you are lowering the base to get `pbr` ahead of another service, lower it only as far as you need, and prefer raising the other service's priorities where that is an option.
+
+### A Word About the Maximum Number of Interfaces/Tunnels
+
+Every interface `pbr` manages consumes **one firewall mark** and **one IP rule priority**, and the two are allocated from opposite ends:
+
+- Marks count **up** from [uplink_mark](#uplink_mark) in steps of `uplink_mark`, and an interface is rejected once its mark would exceed [fw_mask](#fw_mask) (`ERROR: Interface mark for 'X' exceeds the fwmask value`).
+- Priorities count **down** from [uplink_ip_rules_priority](#uplink_ip_rules_priority), one per interface, and must stay above `0` — priority `0` is the kernel's own `from all lookup local` rule.
+
+So the ceiling is whichever of the two runs out first:
+
+```text
+max_interfaces = min( fw_mask / uplink_mark , uplink_ip_rules_priority )
+```
+
+with `fw_mask` and `uplink_mark` taken as their integer (decimal) values. With the defaults:
+
+```text
+fw_mask                  = 0x00ff0000 = 16711680
+uplink_mark              = 0x00010000 =    65536
+uplink_ip_rules_priority =                 30000
+
+max_interfaces = min( 16711680 / 65536, 30000 )
+               = min( 255, 30000 )
+               = 255
+```
+
+It is 255 rather than 256 because the first interface is assigned `uplink_mark` itself, not `0`, so the usable marks are `1 × uplink_mark` through `255 × uplink_mark`.
+
+A few consequences of the formula:
+
+- **With the defaults the mask is the binding term** (255 vs 30000), which is why the limit is usually quoted as "255 tunnels".
+- **`uplink_mark` should be the lowest set bit of `fw_mask`.** Setting `uplink_mark=00020000` while leaving `fw_mask=00ff0000` halves the ceiling to 127 for no benefit.
+- **Lowering `uplink_ip_rules_priority` can make the priority the binding term.** At the minimum of `99` the ceiling drops to 99 interfaces.
+
+#### Raising the ceiling
+
+Widening the mask raises the first term — `fw_mask=ffff0000` with `uplink_mark=00010000` gives `65535` mark slots — at which point the priority term binds and the practical maximum becomes `uplink_ip_rules_priority`, up to its own maximum of `32765`.
+
+**Do not do this just to have headroom.** The cleanup window `pbr` clears on every start and reload is sized by `fw_mask / uplink_mark`, *not* by how many interfaces you actually have (see [A Word About uplink_ip_rules_priority](#a-word-about-uplink_ip_rules_priority)). With the defaults that window is 255 priorities wide. With `fw_mask=ffff0000` it becomes 65535 wide, which after clamping means `pbr` deletes **every IP rule between priority 1 and `uplink_ip_rules_priority + 1`** on each reload, whether or not `pbr` created it. On a router that also runs `mwan3`, `netbird`, WireGuard or any other service that installs IP rules, that is a very large blast radius.
+
+Additionally, in [netifd integration](#netifd-integration) mode the LAN rules are installed at `uplink_ip_rules_priority + 1000` and upwards. Keep `uplink_ip_rules_priority` at or below roughly `31000` in that mode, otherwise those rules land beyond the kernel's `main` (32766) and `default` (32767) rules and are never reached.
+
+The practical recommendation is to leave `fw_mask` and `uplink_mark` at their defaults unless you genuinely need more than 255 routed interfaces, which is far beyond what any normal deployment uses.
 
 ## Getting Help
 
