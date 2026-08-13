@@ -178,7 +178,7 @@ This package provides flexible, rule-based routing for OpenWrt — allowing you 
 - PPTP tunnels supported (with protocol names pptp\*).
 - NetBird tunnels supported (with device name wt\*).
 - Tailscale tunnels supported (with device name tailscale\*).
-- Tor tunnels supported in nft mode only (interface name must match tor).
+- Tor tunnels supported in nft mode only (interface name must match tor). See [Tor](#tor) for setup and caveats.
 - Wireguard tunnels supported (with protocol names wireguard\*).
 - IPsec (xfrm) tunnels supported, for routing purpose treated as a point-to-point link. needs testing.  
 In general all interfaces with a point-to-point (POINTOPOINT) link are supported but for those not explicitly mentioned you need to add the interface on Advanced configuration tab in Supported Interfaces.  
@@ -310,6 +310,55 @@ You can also set policies for traffic with a specific DSCP tag. On Windows 10, f
 ### DNS Policies
 
 Use of DNS Policies allows to route the name resolution (DNS) requests from local devices/IP addresses or MAC addresses thru a specific DNS server. Either the first DNS server from a specified interface or a specific DNS server indicated by its IP address can be used. Please note that the use of DNS Policies will override local DNS Hijacking (if enabled) and also will prevent the domain-based policies from working for the local devices specified in the DNS Policy, as your `dnsmasq` will not be queried by those local devices anymore.
+
+### Tor
+
+Tor is the one supported "interface" which isn't a network interface at all. Every other target (WAN, a VPN tunnel, an mwan4 strategy) gets a routing table, a firewall mark and an `ip rule`. Tor has none of those: it runs on the router itself and listens on two local ports, so the service redirects selected traffic into those ports with destination NAT instead of routing it.
+
+Two consequences follow, and both surprise people:
+
+- **Only ports 53, 80 and 443 are redirected.** DNS on `udp/53` goes to Tor's `DNSPort`, and TCP on `80` and `443` goes to Tor's `TransPort`. UDP on 80 and 443 is redirected as well, but Tor's `TransPort` accepts TCP only, so nothing is listening for it — in practice that blocks QUIC/HTTP3 on 443 rather than carrying it, which at least stops it slipping past Tor. Anything else — an onion service on another port, SSH, mail — is **not** redirected at all and leaves through the normal uplink. A Tor policy is not a kill switch.
+- **`dest_port`, `proto` and `chain` are ignored** on a Tor policy, because those rules already fix all three. `src_port` is worse than ignored and produces an invalid rule. The service warns about all four; match on source address instead.
+
+#### Setup
+
+Install the `tor` package and make sure `/etc/tor/torrc` contains at least:
+
+```text
+AutomapHostsOnResolve 1
+VirtualAddrNetworkIPv4 172.16.0.0/12
+TransPort 0.0.0.0:9040
+DNSPort 0.0.0.0:9053
+```
+
+`AutomapHostsOnResolve` is not optional — it is what makes Tor's `DNSPort` invent a virtual address for a `.onion` name. If IPv6 is enabled, add `TransPort [::]:9040` and `DNSPort [::]:9053` as well, or IPv6-preferring clients will reach a port nothing is listening on.
+
+The service reads the ports from `/etc/tor/torrc` only, in the `address:port` form shown above. Ports defined anywhere else — including `/etc/tor/custom`, which is where OpenWrt's own [Tor client guide](https://openwrt.org/docs/guide-user/services/tor/client) puts them — are not seen, and the service falls back to `9053`/`9040`.
+
+Then set the policy's interface to `tor` and match on the source address:
+
+```text
+config policy
+	option name 'Tor for one device'
+	option interface 'tor'
+	option src_addr '192.168.1.50'
+```
+
+Leave `dest_addr` empty unless you specifically want to restrict which destinations go through Tor. With a source-only policy, that client's DNS is redirected to Tor's `DNSPort`, which resolves `.onion` natively — nothing further to arrange. Note this sends **all** of that client's DNS through Tor, so any local filtering (adblock and similar) no longer applies to it.
+
+#### `.onion` addresses
+
+A source-matched policy as above handles `.onion` on its own. If instead you put a domain in `dest_addr`, name resolution has to go through `dnsmasq`, and on a stock OpenWrt `.onion` will not resolve at all: OpenWrt ships `/usr/share/dnsmasq/rfc6761.conf` containing an addressless `server=/onion/`, which makes `dnsmasq` answer `.onion` locally with NXDOMAIN and overrides any `server=/onion/127.0.0.1#9053` you add. Check with:
+
+```sh
+logread | grep "locally-known"
+```
+
+If `onion` is listed there, that is what is happening.
+
+#### Going deeper
+
+The above covers a working setup. For the full mechanism — how the rules are built, how destination-based Tor policies fill their nft set, the complete list of ways a `.onion` setup can fail silently, and step-by-step diagnostics — see [How Tor routing works in pbr](https://docs.mossdef.org/pbr/tor/).
 
 ### Custom User Files
 
