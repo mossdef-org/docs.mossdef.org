@@ -1332,6 +1332,31 @@ If a policy's sources can arrive over a tunnel, do not exclude by MAC address. E
 
 A positive MAC entry carries the same requirement, which is unsurprising: you cannot match a MAC address on a packet that has no Ethernet header.
 
+#### Negated domain names
+
+Domain entries are matched by **address, not by name**. `pbr` has `dnsmasq` add every address it resolves for a domain to an `nft` set, and the rule matches on that set. A negated domain gets a second set of its own, so the rule reads "in the policy's set, but not in the exclusion set".
+
+`dnsmasq` matches its `nftset=` entries by domain suffix — an entry for `example.com` catches `example.com` and all of its subdomains (see [Use DNSMASQ nft sets Support](#use-dnsmasq-nft-sets-support)). That is what makes the useful case work:
+
+```text
+config policy
+  option name 'example-to-wan'
+  option interface 'wan'
+  option dest_addr 'example.com !ads.example.com'
+```
+
+Once a client resolves `ads.example.com` through the router, its addresses are in the exclusion set, and the policy routes the rest of `example.com` while leaving that traffic alone.
+
+Excluding a domain unrelated to anything the policy matches does nothing. The two sets never come to hold the same addresses, so there is nothing for the exclusion to remove. A negated domain is only meaningful where it can overlap something the policy already matches — in practice a subdomain of a domain the policy covers, or an address the policy matches for another reason such as a subnet or a port.
+
+Three things to be aware of:
+
+- **Addresses, not names.** If the excluded name resolves to the same address as the domain you are routing — a shared CDN front end, several sites on one host — that address lands in both sets, and the exclusion removes the parent domain along with it. Nothing warns you when this happens. The exception is dependable only when the excluded name has addresses of its own.
+- **An exclusion is empty until the name has been resolved through the router.** An empty set excludes nothing, so traffic you meant to carve out is routed by the policy until a local client looks the name up via the router's `dnsmasq`. For a positive domain policy the same delay only means the policy has not started working yet; for an exclusion it means the exclusion leaks. The `pbr.user.dnsprefetch` [custom user file](#custom-user-files) resolves policy domains in advance and avoids this, and [<sup>#5</sup>](#footnote5) applies here as well.
+- **The sets only grow.** Unless [nft_set_flags_timeout](#nft_set_flags_timeout) is set, an address is never removed once added. A service that rotates its addresses keeps presenting ones the exclusion set has not seen, and those leak into the policy until they too are resolved through the router.
+
+This all concerns `dest_addr`. Domain names in `src_addr` are not handled by the resolver's set support at all — they are resolved once when the service starts and become a fixed list, so a negated source domain excludes only the addresses the name had at that moment.
+
 ## Getting Help
 
 General discussion of this package is happening at the [OpenWrt forum thread](https://forum.openwrt.org/t/policy-based-routing-pbr-package-discussion/140639).
