@@ -130,6 +130,8 @@ This README is relevant for the `pbr` version 1.2.3. If you're looking for the R
 - DNS policies without an explicit `dest_dns_port` generate valid `nft` syntax again.
 - The `pbr` chain cleanup no longer touches `fw4`'s own `forward`/`output`/`dstnat` base chains, which could previously break LAN↔WAN forwarding and NAT port forwards.
 - Policies mixing negated and non-negated entries in `src_addr`/`dest_addr` (for example `!192.168.1.5 192.168.1.0/24`) are classified correctly.
+- Negated entries in `src_addr`/`dest_addr` now act as exclusions on the rest of the policy instead of getting a rule of their own. A policy such as `192.168.1.0/24 !192.168.1.5` previously added a rule meaning "any source except `192.168.1.5`", which matched almost everything and sent the whole network over that interface. Exclusions are now attached to the policy's own entries, the way they always were for `src_port`/`dest_port`. A policy made up of negated entries alone is unchanged and still means "everything except these".
+- Negated domain names in `dest_addr` (for example `!example.com`) work again. The rule referred to an `nft` set that was never created, which made the whole `pbr` ruleset fail to load, so a single such policy could stop all policy routing.
 
 ### Version 1.2.2
 
