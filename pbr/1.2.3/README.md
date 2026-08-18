@@ -100,6 +100,7 @@
     - [A Word About Compatibility With Other Policy Routing Services](#a-word-about-compatibility-with-other-policy-routing-services)
     - [A Word About uplink_ip_rules_priority](#a-word-about-uplink_ip_rules_priority)
     - [A Word About the Maximum Number of Interfaces/Tunnels](#a-word-about-the-maximum-number-of-interfacestunnels)
+    - [A Word About Negating Policy Options](#a-word-about-negating-policy-options)
   - [Getting Help](#getting-help)
   - [First Troubleshooting Step](#first-troubleshooting-step)
   - [Donate](#donate)
@@ -130,7 +131,7 @@ This README is relevant for the `pbr` version 1.2.3. If you're looking for the R
 - DNS policies without an explicit `dest_dns_port` generate valid `nft` syntax again.
 - The `pbr` chain cleanup no longer touches `fw4`'s own `forward`/`output`/`dstnat` base chains, which could previously break LAN↔WAN forwarding and NAT port forwards.
 - Policies mixing negated and non-negated entries in `src_addr`/`dest_addr` (for example `!192.168.1.5 192.168.1.0/24`) are classified correctly.
-- Negated entries in `src_addr`/`dest_addr` now act as exclusions on the rest of the policy instead of getting a rule of their own. A policy such as `192.168.1.0/24 !192.168.1.5` previously added a rule meaning "any source except `192.168.1.5`", which matched almost everything and sent the whole network over that interface. Exclusions are now attached to the policy's own entries, the way they always were for `src_port`/`dest_port`. A policy made up of negated entries alone is unchanged and still means "everything except these".
+- Negated entries in `src_addr`/`dest_addr` now act as exclusions on the rest of the policy instead of getting a rule of their own. A policy such as `192.168.1.0/24 !192.168.1.5` previously added a rule meaning "any source except `192.168.1.5`", which matched almost everything and sent the whole network over that interface. Exclusions are now attached to the policy's own entries, the way they always were for `src_port`/`dest_port`. A policy made up of negated entries alone is unchanged and still means "everything except these". See [A Word About Negating Policy Options](#a-word-about-negating-policy-options).
 - Negated domain names in `dest_addr` (for example `!example.com`) work again. The rule referred to an `nft` set that was never created, which made the whole `pbr` ruleset fail to load, so a single such policy could stop all policy routing.
 
 ### Version 1.2.2
@@ -630,7 +631,7 @@ Default configuration has service disabled (use Web UI to enable/start service o
 
 Each policy may have a combination of the options below, the `name` and `interface` options are required.
 
-The `src_addr`, `src_port`, `dest_addr` and `dest_port` options supports parameter negation, for example if you want to **exclude** remote port 80 from the policy, set `dest_port` to `"!80"` (notice lack of space between `!` and parameter).
+The `src_addr`, `src_port`, `dest_addr` and `dest_port` options supports parameter negation, for example if you want to **exclude** remote port 80 from the policy, set `dest_port` to `"!80"` (notice lack of space between `!` and parameter). A negated entry is an exclusion applied to the whole policy rather than a match of its own — see [A Word About Negating Policy Options](#a-word-about-negating-policy-options), which also covers the two cases where an exclusion is narrower than it looks.
 
 | Option        | Default    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | ------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1270,6 +1271,66 @@ Widening the mask raises the first term — `fw_mask=ffff0000` with `uplink_mark
 Additionally, in [netifd integration](#netifd-integration) mode the LAN rules are installed at `uplink_ip_rules_priority + 1000` and upwards. Keep `uplink_ip_rules_priority` at or below roughly `31000` in that mode, otherwise those rules land beyond the kernel's `main` (32766) and `default` (32767) rules and are never reached.
 
 The practical recommendation is to leave `fw_mask` and `uplink_mark` at their defaults unless you genuinely need more than 255 routed interfaces, which is far beyond what any normal deployment uses.
+
+### A Word About Negating Policy Options
+
+The `src_addr`, `dest_addr`, `src_port` and `dest_port` options accept negated entries, written with a `!` immediately before the value and no space after it. A negated entry is an **exclusion applied to the whole policy**, not a match in its own right.
+
+Positive entries are combined with OR, negated entries with AND:
+
+```text
+config policy
+  option name 'lan-to-wan'
+  option interface 'wan'
+  option src_addr '192.168.1.0/24 10.0.0.0/24 @br-lan @br-guest !192.168.1.5'
+```
+
+routes traffic coming from `192.168.1.0/24` **or** `10.0.0.0/24` **or** the `br-lan` and `br-guest` devices, in every case **except** traffic from `192.168.1.5`.
+
+A policy made up of negated entries alone is a valid catch-all: `dest_port '!80'` means "every destination port except 80".
+
+#### Why one policy produces several `nft` rules
+
+`nft` has no OR between the match expressions of a single rule — everything in a rule must match at once. So each *type* of positive entry (physical device, MAC address, domain, IPv4, IPv6) becomes a rule of its own, and the policy's exclusions are repeated on each of them. `nft list chain inet fw4 pbr_prerouting` shows the policy above as:
+
+```text
+iifname { "br-lan", "br-guest" } ip saddr != 192.168.1.5 goto pbr_mark_0x010000 comment "lan-to-wan"
+meta nfproto ipv6 iifname { "br-lan", "br-guest" } goto pbr_mark_0x010000 comment "lan-to-wan"
+ip saddr { 10.0.0.0/24, 192.168.1.0/24 } ip saddr != 192.168.1.5 goto pbr_mark_0x010000 comment "lan-to-wan"
+```
+
+This is expected. Several rules per policy does not mean the policy has been duplicated.
+
+The `meta nfproto ipv6` on the second rule is there because `iifname` says nothing about the address family: without it, that rule would also match the IPv4 packets the first rule just excluded, letting `192.168.1.5` back into the policy. `pbr` adds the matching `meta nfproto ipv4` to the first rule as well, but `nft` does not print it — the `ip saddr` match already implies it.
+
+#### An exclusion only applies within its own address family
+
+`!192.168.1.5` is an IPv4 address, so it can only be compared against an IPv4 source and is attached only to the policy's IPv4 rules. The same host's IPv6 traffic is unaffected and is still routed by the policy — that is the second rule in the listing above, which carries no exclusion at all.
+
+To exclude a dual-stack host completely, either exclude it by MAC address, or list both its IPv4 and its IPv6 address as separate negated entries.
+
+#### A MAC exclusion restricts the whole policy to Ethernet traffic
+
+`ether saddr` reads the source MAC out of the packet's Ethernet header. In `nft`, matching a header field that is not present in the packet is a **non-match**, and that applies to `!=` exactly as it does to `=`. A rule carrying `ether saddr != ...` therefore never matches a packet that arrived without an Ethernet header.
+
+Because exclusions are attached to every rule of the policy, adding a MAC exclusion constrains the policy's *other* rules too — including the ones that match on IP addresses:
+
+```text
+config policy
+  option name 'subnet-to-wan'
+  option interface 'wan'
+  option src_addr '192.168.9.0/24 !11:22:33:44:55:66'
+```
+
+```text
+ip saddr 192.168.9.0/24 ether saddr != 11:22:33:44:55:66 goto pbr_mark_0x010000 comment "subnet-to-wan"
+```
+
+That rule only matches traffic that reached the router over an Ethernet-like interface — a bridge, a LAN port, WiFi. Traffic arriving over a tunnel (WireGuard, OpenVPN `tun`, GRE and similar) has no Ethernet header, so the policy will not match it at all, even though the source address is in `192.168.9.0/24`.
+
+If a policy's sources can arrive over a tunnel, do not exclude by MAC address. Exclude the host by IP address instead, or move the MAC exclusion into a separate policy targeting the [ignore](#ignore-target) interface, placed above this one.
+
+A positive MAC entry carries the same requirement, which is unsurprising: you cannot match a MAC address on a packet that has no Ethernet header.
 
 ## Getting Help
 
