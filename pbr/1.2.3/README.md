@@ -1336,7 +1336,7 @@ A positive MAC entry carries the same requirement, which is unsurprising: you ca
 
 Domain entries are matched by **address, not by name**. `pbr` has `dnsmasq` add every address it resolves for a domain to an `nft` set, and the rule matches on that set. A negated domain gets a second set of its own, so the rule reads "in the policy's set, but not in the exclusion set".
 
-`dnsmasq` matches its `nftset=` entries by domain suffix — an entry for `example.com` catches `example.com` and all of its subdomains (see [Use DNSMASQ nft sets Support](#use-dnsmasq-nft-sets-support)). That is what makes the useful case work:
+An entry for `example.com` catches `example.com` and all of its subdomains (see [Use DNSMASQ nft sets Support](#use-dnsmasq-nft-sets-support)) — but only where no more specific entry exists, because `dnsmasq` applies the **most specific** matching entry rather than every matching one. That is what makes the useful case work:
 
 ```text
 config policy
@@ -1345,7 +1345,9 @@ config policy
   option dest_addr 'example.com !ads.example.com'
 ```
 
-Once a client resolves `ads.example.com` through the router, its addresses are in the exclusion set, and the policy routes the rest of `example.com` while leaving that traffic alone.
+`ads.example.com` is the more specific entry of the two, so a lookup for it goes to the exclusion set and its addresses never enter the policy's set at all. The policy routes the rest of `example.com` and leaves that traffic alone.
+
+Note where the work happens: for a subdomain exception the carve-out is done by `dnsmasq`, when it decides which set an answer belongs in — not by the `!=` in the `nft` rule. The `!=` earns its place in the other arrangements: a negated domain alongside non-domain entries such as a subnet or a port, or a policy consisting of the negation alone.
 
 Excluding a domain unrelated to anything the policy matches does nothing. The two sets never come to hold the same addresses, so there is nothing for the exclusion to remove. A negated domain is only meaningful where it can overlap something the policy already matches — in practice a subdomain of a domain the policy covers, or an address the policy matches for another reason such as a subnet or a port.
 
