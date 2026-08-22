@@ -464,13 +464,13 @@ IPv4 sets (always created):
 
 - `pbr_interface_4_dst_ip_user`: for destination/remote IPv4 addresses and IPv4 CIDR netblocks
 - `pbr_interface_4_src_ip_user`: for source/local IPv4 addresses and IPv4 CIDR netblocks
-- `pbr_interface_4_dst_mac_user`: for source/local MAC addresses
+- `pbr_interface_4_src_mac_user`: for source/local MAC addresses
 
 IPv6 sets (only created when [`ipv6_enabled`](#ipv6_enabled) is set to `1`):
 
 - `pbr_interface_6_dst_ip_user`: for destination/remote IPv6 addresses and IPv6 CIDR netblocks
 - `pbr_interface_6_src_ip_user`: for source/local IPv6 addresses and IPv6 CIDR netblocks
-- `pbr_interface_6_dst_mac_user`: for source/local MAC addresses
+- `pbr_interface_6_src_mac_user`: for source/local MAC addresses
 
 #### Shell Scripts
 
