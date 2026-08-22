@@ -35,6 +35,7 @@
     - [DSCP Tag-Based Policies](#dscp-tag-based-policies)
     - [DNS Policies](#dns-policies)
     - [Custom User Files](#custom-user-files)
+      - [Resolving Domain Names in Advance](#resolving-domain-names-in-advance)
     - [Strict Enforcement](#strict-enforcement)
   - [Customization](#customization)
   - [Other Features](#other-features)
@@ -371,9 +372,29 @@ If the custom user file includes are set, the service will load and execute them
 
 The following custom user files are provided:
 
-- `/usr/share/pbr/pbr.user.dnsprefetch`: a shell script provided to resolve destination domain names in advance when using the `dnsmasq.nftset` option.
+- `/usr/share/pbr/pbr.user.dnsprefetch`: a shell script provided to resolve destination domain names in advance when using the `dnsmasq.nftset` option. See [Resolving Domain Names in Advance](#resolving-domain-names-in-advance).
 - `/usr/share/pbr/pbr.user.aws.uc`: a ucode script provided to pull the Continental US AWS IPv4/IPv6 addresses into the WAN user destination sets that the service sets up.
 - `/usr/share/pbr/pbr.user.netflix.uc`: a ucode script provided to pull the Continental US Netflix (AS2906) IPv4/IPv6 addresses into the WAN user destination sets that the service sets up.
+
+#### Resolving Domain Names in Advance
+
+When using the [`dnsmasq.nftset`](#use-dnsmasq-nft-sets-support) option, a domain-based policy does nothing until someone on your network looks the domain up through the router. The `pbr.user.dnsprefetch` custom user file closes that gap by resolving every domain in your policies itself, so the sets are populated before any client asks.
+
+Enable it like any other custom user file, by setting `option enabled '1'` on its `config include` section, and watch it work with:
+
+```sh
+logread | grep pbr
+```
+
+A few things are worth knowing before you enable it:
+
+- **It requires the service version 1.2.3 or later.** The file shipped with 1.2.2 and earlier is a different script, written for the older shell implementation of the service. Each version installs its own copy, so the one that came with your package is the correct one. If you place the script somewhere other than `/usr/share/pbr/pbr.user.dnsprefetch`, edit the path near the top of it — a sourced shell script cannot work out where it lives.
+- **It runs once per service run**: on `start`, `restart` and `reload`. It does not run when the service is stopped, nor on a start that was deferred because the uplink was not up yet. An interface going down and back up does not prefetch by itself either — the service handles an interface update by reloading only that interface, which leaves the custom user files, and the sets they fill, untouched. The addresses already in the sets stay there across such an update, and the next full `reload` refreshes them.
+- **There is no timer.** Nothing re-resolves a domain once its entry expires from the `dnsmasq` cache, so a set keeps the addresses it already has until the next service run. This is what a prefetch is — it fills the sets once, in advance, rather than keeping them current. A domain whose addresses rotate faster than you reload the service will go on being routed by the addresses already in the set, and the new ones are added when a client next resolves that domain through the router, exactly as they would be without the prefetch.
+- **The sets are not filled instantly.** The prefetch runs in the background, after the service has finished its own work, and waits for `dnsmasq` to answer a query before it resolves anything — signalling a `dnsmasq` that is still starting would kill it. On a reload the sets are usually filled within half a minute. After a reboot it takes longer, around a minute on the router this was tested on, because `dnsmasq` needs that long to start answering after the service restarts it. Until the prefetch finishes, domain policies behave exactly as they would without it, so nothing is broken if a set is still empty right after a reload. Progress and the final count are logged.
+- **It briefly flushes the `dnsmasq` cache** while it works. `dnsmasq` only adds addresses to an `nft` set when it fetches an answer from upstream, so a domain answered from its cache would never fill the set.
+
+Note that enabling this file negates one of the advantages[<sup>#7</sup>](#footnote7) of using `dnsmasq.nftset`, as the domains are resolved when the service runs rather than on demand.
 
 If you want to create your own custom user files, please refer to [Processing Custom User Files](#processing-custom-user-files).
 
@@ -1065,7 +1086,7 @@ config openvpn 'vpnserver'
 
 4.  <a name="footnote4"> </a> The service does **NOT** support the "killswitch" router mode (where there is no firewall forwarding from `lan` interface to `wan` interface, so if you stop the VPN tunnel, you have no Internet connection). For proper operation, leave all the default OpenWrt `network` and `firewall` settings for `lan` and `wan` intact.
 
-5.  <a name="footnote5"> </a> When using the `dnsmasq.nftset` option, please make sure to flush the DNS cache of the local devices, otherwise domain policies may not work until you do. If you're not sure how to flush the DNS cache (or if the device/OS doesn't offer an option to flush its DNS cache), reboot your local devices when starting to use the service and/or when connecting data-capable device to your WiFi. Alternatively, you could enable the custom user file `pbr.user.dnsprefetch` to resolve the destination domain names in advance. Note that doing so will negate one of the advantages[<sup>#7</sup>](#footnote7) of using `dnsmasq.nftset`.
+5.  <a name="footnote5"> </a> When using the `dnsmasq.nftset` option, please make sure to flush the DNS cache of the local devices, otherwise domain policies may not work until you do. If you're not sure how to flush the DNS cache (or if the device/OS doesn't offer an option to flush its DNS cache), reboot your local devices when starting to use the service and/or when connecting data-capable device to your WiFi. Alternatively, you could enable the custom user file `pbr.user.dnsprefetch` to resolve the destination domain names in advance, see [Resolving Domain Names in Advance](#resolving-domain-names-in-advance) (requires the service version 1.2.3 or later). Note that doing so will negate one of the advantages[<sup>#7</sup>](#footnote7) of using `dnsmasq.nftset`.
 
 6.  <a name="footnote6"> </a> When using the policies targeting physical devices, you may need to make sure you have the following packages installed: `kmod-br-netfilter`, `kmod-ipt-physdev` and `iptables-mod-physdev`. Also, if your physical device is a part of the bridge, you may have to set `net.bridge.bridge-nf-call-iptables` to `1` in your `/etc/sysctl.conf`.
 
@@ -1356,7 +1377,7 @@ Excluding a domain unrelated to anything the policy matches does nothing. The tw
 Three things to be aware of:
 
 - **Addresses, not names.** If the excluded name resolves to the same address as the domain you are routing — a shared CDN front end, several sites on one host — that address lands in both sets, and the exclusion removes the parent domain along with it. Nothing warns you when this happens. For example `dest_addr 'google.com !drive.google.com'` does nothing useful: both names answer with the same address, so it ends up in both sets and the rule matches neither name. The exception is dependable only when the excluded name has addresses of its own, as an advertising or telemetry subdomain usually does.
-- **An exclusion is empty until the name has been resolved through the router.** An empty set excludes nothing, so traffic you meant to carve out is routed by the policy until a local client looks the name up via the router's `dnsmasq`. For a positive domain policy the same delay only means the policy has not started working yet; for an exclusion it means the exclusion leaks. The `pbr.user.dnsprefetch` [custom user file](#custom-user-files) resolves policy domains in advance and avoids this, and [<sup>#5</sup>](#footnote5) applies here as well.
+- **An exclusion is empty until the name has been resolved through the router.** An empty set excludes nothing, so traffic you meant to carve out is routed by the policy until a local client looks the name up via the router's `dnsmasq`. For a positive domain policy the same delay only means the policy has not started working yet; for an exclusion it means the exclusion leaks. The `pbr.user.dnsprefetch` [custom user file](#resolving-domain-names-in-advance) resolves policy domains in advance and avoids this, as long as the addresses do not change afterwards, and [<sup>#5</sup>](#footnote5) applies here as well.
 - **The sets only grow.** Unless [nft_set_flags_timeout](#nft_set_flags_timeout) is set, an address is never removed once added. A service that rotates its addresses keeps presenting ones the exclusion set has not seen, and those leak into the policy until they too are resolved through the router.
 
 This all concerns `dest_addr`. Domain names in `src_addr` are not handled by the resolver's set support at all — they are resolved once when the service starts and become a fixed list, so a negated source domain excludes only the addresses the name had at that moment.
