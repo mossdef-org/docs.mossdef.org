@@ -34,6 +34,17 @@
     - [Physical Device Policies](#physical-device-policies)
     - [DSCP Tag-Based Policies](#dscp-tag-based-policies)
     - [DNS Policies](#dns-policies)
+    - [Tor](#tor)
+      - [Setup](#setup)
+      - [`.onion` addresses](#onion-addresses)
+      - [Going deeper](#going-deeper)
+    - [Blackhole Interface](#blackhole-interface)
+      - [Setup](#setup-1)
+      - [Match local devices by MAC address, not by IP](#match-local-devices-by-mac-address-not-by-ip)
+      - [Domain blackholes fill on demand](#domain-blackholes-fill-on-demand)
+      - [What a blackholed device can still do](#what-a-blackholed-device-can-still-do)
+      - [The gateway warning is expected](#the-gateway-warning-is-expected)
+      - [Do not disable the interface](#do-not-disable-the-interface)
     - [Custom User Files](#custom-user-files)
       - [Resolving Domain Names in Advance](#resolving-domain-names-in-advance)
     - [Strict Enforcement](#strict-enforcement)
@@ -366,6 +377,87 @@ If `onion` is listed there, that is what is happening.
 #### Going deeper
 
 The above covers a working setup. For the full mechanism — how the rules are built, how destination-based Tor policies fill their nft set, the complete list of ways a `.onion` setup can fail silently, and step-by-step diagnostics — see [How Tor routing works in pbr](https://docs.mossdef.org/pbr/tor/).
+
+### Blackhole Interface
+
+The service has no blackhole target of its own, but you can build one out of two things it already does: it reads its interfaces from `/etc/config/network` rather than from running devices, and [Strict Enforcement](#strict-enforcement) gives an interface that has no device an `unreachable` default route in its own routing table[<sup>#9</sup>](#footnote9). Point a policy at such an interface and the matched traffic has nowhere to go.
+
+This is the cleanest way to cut a device, or a list of domains, off the internet while leaving everything else about it working. It needs no extra package and no firewall rules.
+
+#### Setup
+
+Create an unmanaged interface with **no device**, and leave it out of the boot sequence — there is nothing for netifd to bring up:
+
+```text
+config interface 'blackhole'
+	option proto 'none'
+	option auto '0'
+```
+
+In LuCI this is *Network* → *Interfaces* → *Add new interface*, protocol *Unmanaged*, device left empty, and *Bring up on boot* unticked on the *Advanced Settings* tab. Do not use the **Disable** button on the interface afterwards — see the notes below.
+
+Then add the interface to the service's supported interfaces, on the *Advanced* tab of the WebUI or in the config directly:
+
+```text
+config pbr 'config'
+	...
+	list supported_interface 'blackhole'
+```
+
+A device-less interface is not detected as an uplink, a WAN or a tunnel, so this list is the only thing that makes it selectable as a policy target.
+
+Strict enforcement is enabled by default and nothing needs to be done for it. It is, however, what makes this work at all: with it turned off the service installs no route and no `ip rule` for an interface that has no device, while the policies go on marking traffic — which then leaves through your normal uplink. The service logs `Failed to set up 'blackhole/...'` in that case, but the policies themselves report success.
+
+Finally, write policies pointing at it:
+
+```text
+config policy
+	option name 'No internet for the games console'
+	option interface 'blackhole'
+	option src_addr 'AA:BB:CC:DD:EE:FF'
+
+config policy
+	option name 'Blackhole these domains'
+	option interface 'blackhole'
+	option dest_addr 'example.com tracker.example.net'
+```
+
+#### Match local devices by MAC address, not by IP
+
+This matters as soon as IPv6 is enabled. A policy whose `src_addr` is an IPv4 address produces an IPv4 rule and nothing else, so that device's IPv6 traffic is never matched and leaves through the normal uplink — the blackhole appears to work while half of it leaks. A MAC address produces a single rule that matches at the ethernet layer, which covers both address families at once.
+
+This applies to **source** policies only. A `dest_addr` policy needs no such care: the service builds an IPv4 and an IPv6 destination set for it either way, so domain and remote-address blackholing is already dual-stack.
+
+#### Domain blackholes fill on demand
+
+With the recommended [`dnsmasq.nftset`](#use-dnsmasq-nft-sets-support) option[<sup>#7</sup>](#footnote7), a domain policy's set starts empty and is filled as clients resolve those names through the router. Everything in [A Word About Broken Domain Policies](#a-word-about-broken-domain-policies) applies here unchanged — but read it with the stakes reversed. A routing policy whose set has not filled yet sends traffic down the normal path, which is a delay. A blackhole policy whose set has not filled yet lets through exactly the traffic you meant to stop.
+
+So the usual causes matter more than usual: an answer still cached on the client, encrypted DNS, a resolver set by hand or handed out through DHCP option 6, hardcoded DNS servers, or a [DNS Policy](#dns-policies) sending that device's lookups elsewhere. Any one of them means the client never asks the router, the address never reaches the set, and the blackhole never sees the traffic. Flushing the client's DNS cache[<sup>#5</sup>](#footnote5) covers the first; DNS hijacking covers most of the rest.
+
+To close the gap at startup rather than waiting for the first lookup, enable the `pbr.user.dnsprefetch` custom user file, which resolves your policy domains in advance — see [Resolving Domain Names in Advance](#resolving-domain-names-in-advance). Note that it fills the sets once per service run and does not re-resolve on a timer, so a service that rotates its addresses will be blackholed on the addresses already in the set until the next reload or until a client resolves it again. Setting [`nft_set_timeout`](#a-word-about-nft-set-timeouts) ages stale entries out.
+
+A blackhole policy is a routing control, not a name filter. If a domain must be blocked no matter how the client resolves it, block it at the DNS layer instead.
+
+#### What a blackholed device can still do
+
+A blackhole policy removes the route off your network and nothing else. The device keeps talking to the router — DHCP, DNS, the WebUI — and keeps reaching other hosts on the LAN, because both of those are resolved by routing rules that sit above the service's own. That is usually what is wanted, but it is not a total cut-off, and a device that only needs the local network will not notice anything has happened.
+
+Note also that policies use the `prerouting` chain by default, which sees only forwarded traffic. To blackhole traffic originating on the router itself, set the policy's chain to `output`.
+
+#### The gateway warning is expected
+
+A working blackhole interface produces two warnings on every start:
+
+```text
+WARNING: Unknown IPv4 gateway for 'interface:blackhole; device: '.
+WARNING: Unknown IPv6 gateway for 'interface:blackhole; device: '.
+```
+
+They are correct and can be ignored: the interface genuinely has no gateway, which is the entire point. This is the same warning a tunnel that is down produces, and it is described in [Warning: Unknown IPvX Gateway for device 'XX'](#warning-unknown-ipvx-gateway-for-device-xx). Routing is unaffected.
+
+#### Do not disable the interface
+
+Unticking *Bring up on boot* is correct and is what the setup above does. Pressing the **Disable** button on the interface is not: that sets `option disabled '1'`, which removes the interface from the supported list entirely. Every policy targeting it then fails with `Policy '<name>' has an unknown interface!` and stops filtering. The errors are logged, but the traffic those policies were holding back starts flowing again.
 
 ### Custom User Files
 
@@ -1095,6 +1187,15 @@ config openvpn 'vpnserver'
 
 8.  <a name="footnote8"> </a> When service is started, it subscribes to the supported interfaces updates thru the PROCD. While I was never able to reproduce the issue, some customers report that this method doesn't always work in which case you may want to [set up iface hotplug script](#a-word-about-interface-hotplug-script) to reload service when the relevant interface(s) are updated.
 
+9.  <a name="footnote9"> </a> The route the service installs for an interface with no gateway is of the `unreachable` type, so the kernel answers rather than staying silent: a client whose traffic is sent there gets an immediate ICMP host-unreachable and its connections fail at once with a clear error, which is usually easier to diagnose than a connection that hangs. If you would rather the traffic were dropped silently -- so that an application waits for a timeout instead of noticing and failing over -- replace the route with one of the `blackhole` type. Doing that by hand does not last, since the service replaces the route on every start and reload, so use a shell [custom user file](#custom-user-files), which runs after routing has been set up. It has to be the shell variant: the ucode custom user file API is given `nft` add-rule calls only and cannot touch routes.
+
+    ```sh
+    # /etc/pbr.d/blackhole.sh
+    grep -q "[[:space:]]pbr_blackhole$" /etc/iproute2/rt_tables || return 0
+    ip -4 route replace blackhole default table pbr_blackhole
+    ip -6 route replace blackhole default table pbr_blackhole 2>/dev/null
+    ```
+
 ## FAQ
 
 You may find some useful information below.
@@ -1488,7 +1589,7 @@ You can safely ignore this warning if PBR restarts successfully afterward and th
 
 If, however, the warning persists and no device is shown (Unknown Gateway for device: '), it indicates that an interface (device) is missing or not functioning correctly.
 You can verify this by running `ifconfig` from the command line to check whether the interface (device) is present.
-If you intentionally enabled an interface but did not configure it to start at boot, you can safely ignore the warning. 
+If you intentionally enabled an interface but did not configure it to start at boot, you can safely ignore the warning. This is also the expected warning for a deliberately device-less interface used as a sink, see [Blackhole Interface](#blackhole-interface).
 Alternatively, if the interface is not needed, it is recommended to disable it.
 
 ## Thanks
