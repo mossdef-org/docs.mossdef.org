@@ -109,6 +109,7 @@
       - [Routing Netflix/Amazon Prime/Hulu Traffic via WAN](#routing-netflixamazon-primehulu-traffic-via-wan)
     - [A Word About Interface Hotplug Script](#a-word-about-interface-hotplug-script)
     - [A Word About Broken Domain Policies](#a-word-about-broken-domain-policies)
+    - [A Word About `proto` and Ports](#a-word-about-proto-and-ports)
     - [A Word About `nft` Set Timeouts](#a-word-about-nft-set-timeouts)
     - [A Word About Compatibility With Other Policy Routing Services](#a-word-about-compatibility-with-other-policy-routing-services)
     - [A Word About uplink_ip_rules_priority](#a-word-about-uplink_ip_rules_priority)
@@ -154,6 +155,10 @@ This README is relevant for the `pbr` version 1.2.3. If you're looking for the R
 - A Tor policy no longer breaks the ruleset when the Tor service is not running. The redirect ports are read from `torrc` rather than from the running daemon, so they are right while Tor is still starting — which matters at boot, where `pbr` starts before Tor does. A Tor policy on a router with no `torrc` at all is now reported as having an unknown interface, instead of emitting a rule `nft` rejects.
 - Arguments in the commands `pbr` runs are quoted individually, so interface and policy names containing spaces or shell punctuation are passed through as written rather than being split or interpreted.
 - The `Unknown IPv6 gateway` warning is no longer logged twice for the same interface.
+- Setting [icmp_interface](#icmp_interface) — *Default ICMP Interface* in the WebUI — no longer stops the service from starting when IPv6 is enabled. The IPv6 rule was written as `ip6 protocol icmp`, which `nft` refuses because IPv6 headers have no `protocol` field and the IPv6 ICMP protocol is `icmpv6`; since the whole ruleset is validated in one pass, one malformed rule took every policy down with it. It is now emitted as `ip6 nexthdr icmpv6`.
+- A policy's [proto](#proto) is reported when it cannot do what it looks like it does. Set without a port it never reached the rule at all, so the policy silently routed every protocol; and a protocol that has no ports, given one, produced a rule `nft` refuses and the service failed to start. The first is now a warning naming the policy, the second rejects that policy so the rest of the ruleset survives. See [A Word About `proto` and Ports](#a-word-about-proto-and-ports).
+- The [chain](#chain) option documented `input` and `postrouting`, which `pbr` has never created a chain for — a policy naming one produced a rule `nft` could not place (`Error: No such file or directory; did you mean chain 'pbr_output' in table inet 'fw4'?`) and the whole ruleset was rejected, leaving the service inactive. The supported values are `prerouting`, `forward` and `output`.
+
 
 ### Version 1.2.2
 
@@ -764,8 +769,8 @@ The `src_addr`, `src_port`, `dest_addr` and `dest_port` options supports paramet
 | src_port      |            | List of space-separated local/source ports or port-ranges.                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | dest_addr     |            | List of space-separated remote/target IP addresses, CIDRs or hostnames/domain names. Versions 1.1.2 and later allow using URLs to list of addresses. If `curl` is installed you can use the `file://` schema, otherwise you can use `ftp://`, `http://` and `https://` schemas. This is obviously not compatible with the `secure_reload` option.                                                                                                                                |
 | dest_port     |            | List of space-separated remote/target ports or port-ranges.                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| proto         | auto       | Policy protocol, can be any valid protocol from `/etc/protocols` for CLI/uci or can be selected from the values set in `webui_supported_protocol`.                                                                                                                                                                                                                                                                                                                               |
-| chain         | prerouting | Policy chain, can be either `forward`, `input`, `prerouting`, `postrouting` or `output`. This setting is case-sensitive.                                                                                                                                                                                                                                                                                                                                                         |
+| <a name="proto"></a>proto | auto | Policy protocol. **It qualifies the port match rather than matching on its own**, so it only takes effect when `src_port` or `dest_port` is also set — see [A Word About `proto` and Ports](#a-word-about-proto-and-ports). Only `tcp`, `udp`, `sctp`, `dccp` and `udplite` can carry a port and are therefore the only usable values; from 1.2.3-r97 the WebUI offers only those, and the service reports anything that cannot work.                                                                                                                                                                                                                                                                                                                               |
+| <a name="chain"></a>chain | prerouting | Policy chain, one of `prerouting`, `forward` or `output`. This setting is case-sensitive. `input` and `postrouting` are **not** supported — `pbr` creates no chain for them, so a policy naming one produces a rule `nft` cannot place and the whole ruleset is rejected.                                                                                                                                                                                                                                                                                                                                                         |
 
 ### DNS Policy Options
 
@@ -1344,6 +1349,62 @@ Some examples on when the domain(s) policies defined in `pbr` may not work:
   - a local client is set to use a DNS different from router thru the DNS explicitly set on client, solved by removing explicit DNS set on client.
   - a local client is set to use an ecnrypted DNS, solved by disabling use of encrypted DNS requests.
   - a local client uses the hardcoded DNS servers which you cannot edit, solved by enabling DNS hijacking on your router.
+
+### A Word About `proto` and Ports
+
+`proto` is a **port qualifier**, not a match of its own. It tells `pbr` which
+transport protocol the ports in `src_port`/`dest_port` belong to, and it only
+ever reaches the generated rule attached to one of them. The defaulting shows
+the intent: leave `proto` unset and it becomes `tcp udp` when a port is present,
+and `all` when it is not.
+
+Two consequences, both of which used to happen silently.
+
+**`proto` without a port does nothing.** The protocol is dropped from the rule
+and the policy routes *every* protocol, not the one you asked for. If you want
+"all UDP to this destination", give it the full port range:
+
+```sh
+uci set pbr.@policy[-1].proto='udp'
+uci set pbr.@policy[-1].dest_port='0-65535'
+uci commit pbr
+```
+
+**Only five protocols can carry a port at all** — `tcp`, `udp`, `sctp`, `dccp`
+and `udplite`. Everything else in `/etc/protocols` (`icmp`, `igmp`, `gre`,
+`esp`, `ah`, `ipv6-icmp` and the rest) cannot be used in a policy: without a
+port it is ignored, and *with* a port `pbr` emits a rule such as
+`icmp dport { 53 }` which `nft` refuses — and because the whole file is
+validated in one pass, the service fails to start and **nothing** routes.
+
+At a glance, for a policy that is otherwise identical:
+
+| `proto` | port | what the rule matches |
+|---|---|---|
+| `udp` | *(none)* | **everything** — the protocol is dropped |
+| `udp` | `0-65535` | all UDP — this is how you say "all of this protocol" |
+| `tcp` | `53` | TCP port 53 only |
+| `icmp` | *(none)* | everything — ICMP cannot be matched by a policy at all |
+| `icmp` | `53` | nothing: `nft` refuses `icmp dport { 53 }` and the **service does not start** |
+
+From **1.2.3-r97** neither passes unnoticed: a `proto` that cannot take effect
+is reported as a warning, and a protocol given a port it cannot have is rejected
+with an error so the rest of the ruleset survives. The WebUI dropdown offers
+only the five usable values from that release too, keeping any value an existing
+policy already holds so opening the page does not silently change it.
+
+**On 1.2.3-r95 there is no such reporting** — both cases are silent, so a policy
+that looks right can be routing far more than you intended, or stopping the
+service outright. Nothing needs migrating: the configurations described above
+behave the same before and after, you are simply told about them from r97. If
+you are on r95, the last row of the table is the one to check for by hand.
+(There is no r96; the 1.2.3 series numbers releases in twos.)
+
+**To route ICMP**, do not use a policy. Set
+[icmp_interface](#icmp_interface) — *Default ICMP Interface* on the WebUI's
+*Advanced Configuration* tab — which sends all ICMP out of the interface you
+choose. Note it is a single global setting: unlike a policy it cannot say "ICMP
+for these clients only".
 
 ### A Word About `nft` Set Timeouts
 
