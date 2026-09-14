@@ -1060,6 +1060,8 @@ config policy
   option chain 'output'
 ```
 
+This example runs the server on **TCP**, which works as shown. If you run it on **UDP** instead, the server also needs `option multihome '1'` and the policy needs `option proto 'udp'` — see [A Word About Return Traffic for Inbound Connections](#a-word-about-return-traffic-for-inbound-connections) for why.
+
 The network/firewall/openvpn settings are below.
 
 Relevant part of `/etc/config/network` (**DO NOT** modify default OpenWrt network settings for either `wan` or `lan`):
@@ -1275,6 +1277,96 @@ To unset a WireGuard tunnel as default route, set the following to the appropria
   ```
 
 - Routing WireGuard traffic may require setting `net.ipv4.conf.wg0.rp_filter = 2` in `/etc/sysctl.conf`. Please refer to [issue #41](https://github.com/stangri/source.mossdef.org/issues/41) for more details.
+
+### A Word About Return Traffic for Inbound Connections
+
+This applies when something connects **to** your router from the internet — a VPN server running on the router, or a port forward to a machine on your LAN — **and** your default route is a tunnel rather than WAN.
+
+The connection arrives on WAN, but the reply follows the default route into the tunnel. The other end never receives it, or receives it from the wrong address, and the connection fails. You need the reply to go back out WAN.
+
+Whether a `pbr` policy can fix this comes down to a single question: **is the reply's source address already correct, and only the interface wrong?**
+
+A policy works by marking a packet, and the mark selects a routing table. A mark can change **which interface** a packet leaves by. It cannot change the **source address** that is already written into the packet. So a policy helps when the interface is the only thing that is wrong, and cannot help when the source address is wrong too.
+
+That gives three cases.
+
+#### Port forwards — a policy works
+
+The reply comes from the machine on your LAN, so it already carries that machine's own address. Nothing changes it. Only the interface needs correcting, and a policy does exactly that.
+
+Say you have a web server on `192.168.1.50`, reached from the internet through a port forward. The request arrives on WAN, but because your default route is the tunnel, the reply from `192.168.1.50` is sent into the tunnel and the visitor never gets it. This policy sends those replies back out WAN, where they belong:
+
+```text
+config policy
+  option name 'Web Server Return via WAN'
+  option interface 'wan'
+  option src_addr '192.168.1.50'
+  option src_port '80'
+  option proto 'tcp'
+```
+
+Match the policy to the machine and the port you forwarded: `src_addr` is the machine the port forward points at, and `src_port` is the port it serves on — not the port you forwarded from, if the two differ.
+
+No `chain` option is needed — the default (`prerouting`) is correct here, because the reply passes **through** the router rather than originating on it.
+
+This also depends on reverse path filtering, which OpenWrt leaves off by default (`net.ipv4.conf.all.rp_filter=0`) — that is what you want. If you have set it to `1` (strict) yourself, inbound connections are dropped before any of this applies, because the route back to the visitor goes down the tunnel.
+
+#### An OpenVPN server on the router — a policy works
+
+Here the reply is created by the router itself, so the policy needs `option chain 'output'`.
+
+**If your server uses TCP, it works as it is.** A TCP connection remembers the address it was accepted on and reuses it for every reply, so the source address is already correct. This is the configuration shown in [Local OpenVPN Server + OpenVPN Client (Scenario 1)](#local-openvpn-server--openvpn-client-scenario-1):
+
+```text
+config policy
+  option name 'OpenVPN Server'
+  option interface 'wan'
+  option proto 'tcp'
+  option src_port '1194'
+  option chain 'output'
+```
+
+**If your server uses UDP, add `multihome` to the server.** Without it, OpenVPN picks a source address afresh for every reply, and with a tunnel as the default route it picks the tunnel's address — so the policy alone is not enough. `multihome` makes OpenVPN remember which of the router's own addresses each client packet arrived on and reply from that same address:
+
+```text
+config openvpn 'vpnserver'
+  option port '1194'
+  option proto 'udp'
+  option multihome '1'
+  option server '192.168.200.0 255.255.255.0'
+  ...
+```
+
+If your server is configured from an `.ovpn` file instead of uci, add a line reading `multihome` to that file.
+
+Then the matching policy, with `udp` instead of `tcp`:
+
+```text
+config policy
+  option name 'OpenVPN Server'
+  option interface 'wan'
+  option proto 'udp'
+  option src_port '1194'
+  option chain 'output'
+```
+
+(OpenVPN's `local` option also pins the source address, but it hardcodes one specific address. If your WAN address ever changes, the server stops working. `multihome` has no such problem and is the better choice.)
+
+#### A WireGuard server on the router — a policy cannot work, and `pbr` handles it for you
+
+WireGuard is built into the kernel and chooses the source address for its replies itself, before any firewall rule is reached. It also does something OpenVPN does not: whenever the route points at a different interface than the one the client's packet arrived on, it deliberately **discards** the address it had remembered and picks a new one from the route. With a tunnel as the default route, that is the tunnel's address.
+
+So by the time a policy could act, the reply already carries the wrong source address. The mark still moves it to WAN, but the address is wrong, so NAT rewrites it — and in doing so it usually has to change the source port as well, because the correct port is already in use by the incoming connection. The remote peer then sees packets arriving from an unexpected port and ignores them. Adding a policy does not help, and neither does any other combination of policies.
+
+**You do not need to do anything about this.** Because no policy can fix it, `pbr` handles WireGuard servers automatically. It detects any WireGuard interface in `/etc/config/network` that has a `listen_port` — that is what makes it a server rather than a client — and creates an ip rule for that port, for both IPv4 and IPv6:
+
+```text
+ip rule add sport <listen_port> table pbr_<your wan interface>
+```
+
+An ip rule is consulted **during** the route lookup, not afterwards, which is early enough to influence the source address as well as the interface. That is the one place where this can be fixed, and it is why WireGuard servers get this special treatment while OpenVPN servers do not need it.
+
+If you want to change this default, see [WireGuard Server Use Cases](#wireguard-server-use-cases).
 
 ### A Word About Cloudflare's 1.1.1.1 App
 
