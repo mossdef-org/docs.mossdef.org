@@ -48,6 +48,7 @@
       - [Do not disable the interface](#do-not-disable-the-interface)
     - [Custom User Files](#custom-user-files)
       - [Resolving Domain Names in Advance](#resolving-domain-names-in-advance)
+      - [Refreshing the Sets on a Timer](#refreshing-the-sets-on-a-timer)
     - [Strict Enforcement](#strict-enforcement)
   - [Customization](#customization)
   - [Other Features](#other-features)
@@ -456,7 +457,7 @@ With the recommended [`dnsmasq.nftset`](#use-dnsmasq-nft-sets-support) option[<s
 
 So the usual causes matter more than usual: an answer still cached on the client, encrypted DNS, a resolver set by hand or handed out through DHCP option 6, hardcoded DNS servers, or a [DNS Policy](#dns-policies) sending that device's lookups elsewhere. Any one of them means the client never asks the router, the address never reaches the set, and the blackhole never sees the traffic. Flushing the client's DNS cache[<sup>#5</sup>](#footnote5) covers the first; DNS hijacking covers most of the rest.
 
-To close the gap at startup rather than waiting for the first lookup, enable the `pbr.user.dnsprefetch` custom user file, which resolves your policy domains in advance — see [Resolving Domain Names in Advance](#resolving-domain-names-in-advance). Note that it fills the sets once per service run and does not re-resolve on a timer, so a service that rotates its addresses will be blackholed on the addresses already in the set until the next reload or until a client resolves it again. Setting [`nft_set_timeout`](#a-word-about-nft-set-timeouts) ages stale entries out.
+To close the gap at startup rather than waiting for the first lookup, enable the `pbr.user.dnsprefetch` custom user file, which resolves your policy domains in advance — see [Resolving Domain Names in Advance](#resolving-domain-names-in-advance). Note that it fills the sets once per service run and does not re-resolve on a timer of its own, so a service that rotates its addresses will be blackholed on the addresses already in the set until the next reload or until a client resolves it again. Setting [`nft_set_timeout`](#a-word-about-nft-set-timeouts) ages stale entries out, and the prefetch can be run from `cron` to rebuild the sets — see [Refreshing the Sets on a Timer](#refreshing-the-sets-on-a-timer).
 
 A blackhole policy is a routing control, not a name filter. If a domain must be blocked no matter how the client resolves it, block it at the DNS layer instead.
 
@@ -505,11 +506,40 @@ A few things are worth knowing before you enable it:
 
 - **It requires the service version 1.2.3 or later.** The file shipped with 1.2.2 and earlier is a different script, written for the older shell implementation of the service. Each version installs its own copy, so the one that came with your package is the correct one. If you place the script somewhere other than `/usr/share/pbr/pbr.user.dnsprefetch`, edit the path near the top of it — a sourced shell script cannot work out where it lives.
 - **It runs once per service run**: on `start`, `restart` and `reload`. It does not run when the service is stopped, nor on a start that was deferred because the uplink was not up yet. An interface going down and back up does not prefetch by itself either — the service handles an interface update by reloading only that interface, which leaves the custom user files, and the sets they fill, untouched. The addresses already in the sets stay there across such an update, and the next full `reload` refreshes them.
-- **There is no timer.** Nothing re-resolves a domain once its entry expires from the `dnsmasq` cache, so a set keeps the addresses it already has until the next service run. This is what a prefetch is — it fills the sets once, in advance, rather than keeping them current. A domain whose addresses rotate faster than you reload the service will go on being routed by the addresses already in the set, and the new ones are added when a client next resolves that domain through the router, exactly as they would be without the prefetch.
+- **There is no timer of its own.** Nothing re-resolves a domain once its entry expires from the `dnsmasq` cache, so a set keeps the addresses it already has until the next service run. This is what a prefetch is — it fills the sets once, in advance, rather than keeping them current. A domain whose addresses rotate faster than you reload the service will go on being routed by the addresses already in the set, and the new ones are added when a client next resolves that domain through the router, exactly as they would be without the prefetch. If that is a problem for you, the same file can be run from `cron` — see [Refreshing the Sets on a Timer](#refreshing-the-sets-on-a-timer).
 - **The sets are not filled instantly.** The prefetch runs in the background, after the service has finished its own work, and waits for `dnsmasq` to answer a query before it resolves anything — signalling a `dnsmasq` that is still starting would kill it. On a reload the sets are usually filled within half a minute. After a reboot it takes longer, around a minute on the router this was tested on, because `dnsmasq` needs that long to start answering after the service restarts it. Until the prefetch finishes, domain policies behave exactly as they would without it, so nothing is broken if a set is still empty right after a reload. Progress and the final count are logged.
 - **It briefly flushes the `dnsmasq` cache** while it works. `dnsmasq` only adds addresses to an `nft` set when it fetches an answer from upstream, so a domain answered from its cache would never fill the set.
 
 Note that enabling this file negates one of the advantages[<sup>#7</sup>](#footnote7) of using `dnsmasq.nftset`, as the domains are resolved when the service runs rather than on demand.
+
+#### Refreshing the Sets on a Timer
+
+A prefetch fills the sets; it does not keep them current. Because `dnsmasq` never removes an address it has added, a domain that changes address leaves the old one behind, and the set only grows — see [A Word About `nft` Set Timeouts](#a-word-about-nft-set-timeouts) for what that costs you. If the domains in your policies rotate their addresses, you can run the same file from `cron` to rebuild the sets periodically. Once a night, at an hour when nobody is using the network, is the sensible default:
+
+```sh
+0 4 * * * PBR_DNSPREFETCH_MODE=standalone /bin/sh /usr/share/pbr/pbr.user.dnsprefetch
+```
+
+Use a shorter interval only if your domains change address faster than that, and read the note on the gap below before you put one in the middle of the working day — `0 */6 * * *`, for instance, also runs at 06:00, 12:00 and 18:00.
+
+`PBR_DNSPREFETCH_MODE=standalone` is not optional, and is what makes the file runnable on its own. Without it the script waits for a service run that is not happening, gives up after about three minutes and resolves nothing. It also flushes the `dnsmasq` cache, which a run outside the service has to do itself — `dnsmasq` only writes to an `nft` set when it takes an answer from upstream, so lookups served from its own cache would add nothing at all. A standalone run takes a second or two. This requires the version of the file that ships with releases after 1.2.4-r0.
+
+The variable says how the script is being run, not what it does to the sets. Rebuilding them is the separate option below.
+
+On its own that only tops the sets up, adding whatever is current alongside whatever is already there. To have each run rebuild them instead, edit the script and set:
+
+```sh
+_dnsprefetch_flush_sets='1'
+```
+
+Each standalone run then empties the domain sets immediately before resolving them again, so what is left afterwards is exactly what your domains resolve to now. Four things are worth knowing about it:
+
+- **It empties only the sets `dnsmasq` fills.** The names are read from the service's own `dnsmasq` file, so the per-interface `pbr_*_user` sets are never touched — those hold whatever your other custom user files put there, and nothing here would put it back.
+- **It applies to a standalone run only.** A `start` or a `reload` deliberately keeps each set's addresses unless that policy's domain list changed, so that a client still holding a cached answer is not de-routed by a reload it did not ask for. Enabling this does not change that.
+- **It also drops addresses that arrived via subdomains.** A set collects addresses for names you never listed, because `dnsmasq` matches by suffix: a policy on `example.com` picks up `www.example.com` as soon as a client resolves it. A rebuild clears those along with everything else, and the prefetch re-resolves only the names you listed, so they return only when a client asks for them again. Until then that traffic is not matched by the policy. If a particular subdomain matters, add it to the policy next to the parent — it is then resolved in advance like any other listed name, and comes back with the rest. Otherwise this is the one case where [`nft_set_timeout`](#nft_set_timeout) is the gentler tool, since it lets such an entry live out its own countdown instead of clearing them all at once.
+- **There is a gap of a second or two** between the flush and the lookups that refill the sets, during which a domain policy matches nothing and new connections take the default route. Connections already established keep the route they have. It is a small window, but a connection opened inside it leaves by the wrong interface and stays there for as long as it lasts — which is the argument for running this at 04:00 rather than at 14:00. Pick the quiet hour first and the interval second; there is nothing to gain from running it faster than the records actually change.
+
+This works alongside [`nft_set_timeout`](#nft_set_timeout) rather than replacing it. The addresses a rebuild puts back are new elements, so their timeout starts again — which a plain re-add does not do, as described under [A Word About `nft` Set Timeouts](#a-word-about-nft-set-timeouts). With a rebuild on a timer, `nft_set_timeout` becomes a backstop for anything it does not catch rather than the mechanism doing the work.
 
 If you want to create your own custom user files, please refer to [Processing Custom User Files](#processing-custom-user-files).
 
@@ -1541,6 +1571,10 @@ uci commit pbr
 ```
 
 then apply it with the restart above. A day is long enough that the expiry window rarely bites, and short enough that an address a service has stopped using does not linger indefinitely. Note what this does and does not fix: the domain keeps working either way, because the new address is added the next time a client resolves the name through the router. What you are clearing up is the leftovers. Without a timeout every address a domain has ever resolved to stays in the set for as long as the router is up, so the set grows without bound — and if one of those addresses is later reassigned to somebody else, traffic to it carries on being routed by this policy, with nothing left to connect it to the domain that put it there. That is a slow leak rather than a fault, which is why this is a recommendation and not a default.
+
+There is another way to get at the same leftovers, which can be used instead of a timeout or alongside one: `pbr.user.dnsprefetch` can be run from `cron` to rebuild the domain sets on a schedule — see [Refreshing the Sets on a Timer](#refreshing-the-sets-on-a-timer). It clears the sets at an hour you choose rather than on each entry's own clock, and re-resolves your policy domains straight away, so their current addresses are back within seconds instead of waiting for a client to ask.
+
+It is not a drop-in replacement, though, and which one suits you depends on your policies. A rebuild only re-resolves the domains you listed, so any address the set picked up for a subdomain you did not list — which happens by itself, since `dnsmasq` matches by suffix — is cleared and comes back only when a client resolves that name again. A timeout ages those entries out too, but lets each one live out its own countdown rather than clearing them all at once. Where a policy leans on subdomain matching, prefer the timeout — or list the subdomains that actually matter, which puts them back under the prefetch's care. Where a policy already names what it cares about, a nightly rebuild is tidier. Using both is reasonable: with a rebuild on a timer, the timeout becomes a backstop for what the rebuild does not reach.
 
 ### A Word About Compatibility With Other Policy Routing Services
 
