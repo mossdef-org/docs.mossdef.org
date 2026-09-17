@@ -7,7 +7,7 @@
 # Policy-Based Routing OpenWrt Package Documentation
 
 [![OpenWrt](https://img.shields.io/badge/OpenWrt-Compatible-blueviolet)](https://openwrt.org)
-[![Web UI](https://img.shields.io/badge/Web_UI-Available-blue)](https://docs.mossdef.org/pbr/)
+[![Web UI](https://img.shields.io/badge/Web_UI-Available-blue)](https://docs.mossdef.org/pbr/1.2.0/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-lightgrey)](https://github.com/stangri/pbr/blob/master/LICENSE)
 
 
