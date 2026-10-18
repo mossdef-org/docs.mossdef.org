@@ -1,0 +1,28 @@
+---
+---
+<!-- The unversioned https://docs.mossdef.org/pbr/ sends readers to the current
+     release's documentation. On a new release, change the one line below. -->
+{% assign latest = "/pbr/1.2.4/" %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Policy-Based Routing OpenWrt Package Documentation</title>
+    <link rel="canonical" href="https://docs.mossdef.org{{ latest }}">
+    <meta http-equiv="refresh" content="0; url={{ latest }}">
+    <meta name="robots" content="noindex">
+    <script>
+      // Carry the fragment over, so older links such as
+      // /pbr/#custom-user-files still land on the right section.
+      // Without JavaScript only the meta refresh above runs, and it cannot do
+      // that: a static page has no other way to read the fragment.
+      location.replace("{{ latest }}" + location.search + location.hash);
+    </script>
+  </head>
+  <body>
+    <p>
+      The <code>pbr</code> documentation has moved to
+      <a href="{{ latest }}">docs.mossdef.org{{ latest }}</a>.
+    </p>
+  </body>
+</html>
