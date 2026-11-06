@@ -562,6 +562,7 @@ The resolver is usually the one your VPN provider pushes inside the tunnel. The 
 A few things are worth knowing:
 
 - **It is not a [DNS Policy](#dns-policies).** A DNS Policy is keyed by the client: it sends every lookup a device makes to another resolver, past `dnsmasq`, so domain policies stop working for that device. This file is keyed by the policy's domains: only those lookups move, they still go through `dnsmasq`, and the sets fill. The two can be used together.
+- **It applies to every client.** `dnsmasq` cannot tell clients apart, so a policy limited by `src_addr` still pins its domains' lookups for every device on the network; only the routing follows `src_addr`.
 - **The domains fail closed.** The lookups are pinned to the interface, with no fallback to other resolvers, so while the tunnel is down they fail rather than going out by the WAN.
 - **A mistake costs only that interface.** An entry that is not an IPv4/IPv6 address with an optional `#port`, or an interface that has no device when the service runs, is skipped with a warning in the system log, and its domains resolve as before. The device is looked up when the service runs, so an interface that was down at that point is pinned on the next `start` or `reload`; the interface coming up does not run custom user files by itself.
 - **Remove matching `server=` entries from `/etc/config/dhcp`.** A `server=` entry there for the same domain is used alongside this one rather than overridden, so answers would come from both resolvers. A warning is logged when one is found.
