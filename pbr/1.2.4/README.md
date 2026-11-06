@@ -491,6 +491,7 @@ The following custom user files are provided:
 - `/usr/share/pbr/pbr.user.dnsprefetch`: a shell script provided to resolve destination domain names in advance when using the `dnsmasq.nftset` option. See [Resolving Domain Names in Advance](#resolving-domain-names-in-advance).
 - `/usr/share/pbr/pbr.user.aws.uc`: a ucode script provided to pull the Continental US AWS IPv4/IPv6 addresses into the WAN user destination sets that the service sets up.
 - `/usr/share/pbr/pbr.user.netflix.uc`: a ucode script provided to pull the Continental US Netflix (AS2906) IPv4/IPv6 addresses into the WAN user destination sets that the service sets up.
+- `/usr/share/pbr/pbr.user.tunnel-dns.uc`: a ucode script provided to resolve the domains of a policy through a resolver reached via the policy's interface, when using the `dnsmasq.nftset` option. See [Resolving Policy Domains Through Their Interface](#resolving-policy-domains-through-their-interface).
 
 #### Resolving Domain Names in Advance
 
@@ -540,6 +541,31 @@ Each standalone run then empties the domain sets immediately before resolving th
 - **There is a gap of a second or two** between the flush and the lookups that refill the sets, during which a domain policy matches nothing and new connections take the default route. Connections already established keep the route they have. It is a small window, but a connection opened inside it leaves by the wrong interface and stays there for as long as it lasts — which is the argument for running this at 04:00 rather than at 14:00. Pick the quiet hour first and the interval second; there is nothing to gain from running it faster than the records actually change.
 
 This works alongside [`nft_set_timeout`](#nft_set_timeout) rather than replacing it. The addresses a rebuild puts back are new elements, so their timeout starts again — which a plain re-add does not do, as described under [A Word About `nft` Set Timeouts](#a-word-about-nft-set-timeouts). With a rebuild on a timer, `nft_set_timeout` becomes a backstop for anything it does not catch rather than the mechanism doing the work.
+
+#### Resolving Policy Domains Through Their Interface
+
+A domain policy routes a domain's traffic through its interface, but the domain is still looked up through the router's normal upstream resolvers. For a service that answers by location, such as a CDN, that matters: the answer is chosen for wherever your upstream resolver sits, not for the tunnel the traffic then leaves by, and the service may serve the wrong region or refuse it. The `pbr.user.tunnel-dns.uc` custom user file sends the lookups for a policy's domains to a resolver reached through the policy's own interface, so the answer matches the exit. Every other lookup keeps your normal upstreams.
+
+It works by adding a `server=/<domain>/<resolver>@<device>` line to the service's `dnsmasq` file for each domain of a policy whose interface it knows. The answers still pass through `dnsmasq`, so the sets fill exactly as before.
+
+To use it, copy the file to `/etc/pbr.d/`, where a package upgrade will not overwrite it, and fill in the map near its top. It is keyed by the interface name used in your policies, and each value is the address of a resolver reachable through that interface, with an optional `#port`:
+
+```text
+	let resolvers = {
+		wg0: '10.64.0.1',
+		vpnclient: '10.8.0.1',
+	};
+```
+
+The resolver is usually the one your VPN provider pushes inside the tunnel. The map is explicit on purpose, rather than read from the interface: a tunnel whose daemon runs outside `netifd` (`proto none`, as OpenVPN usually does) never tells `netifd` the resolver it pushed, and an interface's `dns` option may have been set locally to point back at a LAN resolver, which would loop.
+
+A few things are worth knowing:
+
+- **It is not a [DNS Policy](#dns-policies).** A DNS Policy is keyed by the client: it sends every lookup a device makes to another resolver, past `dnsmasq`, so domain policies stop working for that device. This file is keyed by the policy's domains: only those lookups move, they still go through `dnsmasq`, and the sets fill. The two can be used together.
+- **The domains fail closed.** The lookups are pinned to the interface, with no fallback to other resolvers, so while the tunnel is down they fail rather than going out by the WAN.
+- **A mistake costs only that interface.** An entry that is not an IPv4/IPv6 address with an optional `#port`, or an interface that has no device when the service runs, is skipped with a warning in the system log, and its domains resolve as before. The device is looked up when the service runs, so an interface that was down at that point is pinned on the next `start` or `reload`; the interface coming up does not run custom user files by itself.
+- **Remove matching `server=` entries from `/etc/config/dhcp`.** A `server=` entry there for the same domain is used alongside this one rather than overridden, so answers would come from both resolvers. A warning is logged when one is found.
+- **It requires the `dnsmasq.nftset`** [resolver set option](#use-dnsmasq-nft-sets-support), and does nothing otherwise.
 
 If you want to create your own custom user files, please refer to [Processing Custom User Files](#processing-custom-user-files).
 
