@@ -723,12 +723,12 @@ opkg update; opkg install resolveip ip-full
 If you want to use `dnsmasq`'s `nft` `sets` support, you will need to install `dnsmasq-full` instead of the `dnsmasq`. To do that, connect to your router via ssh and run the following commands:
 
 ```sh
-opkg update
-opkg install libnettle8 libnetfilter-conntrack3
-cd /tmp/ && opkg download dnsmasq-full
-opkg remove dnsmasq
-opkg install dnsmasq-full --cache /tmp/
-rm -f /tmp/dnsmasq-full*.ipk
+apk update
+cd /tmp
+apk fetch --output . dnsmasq-full
+apk del dnsmasq
+apk add --allow-untrusted /tmp/dnsmasq-full-*.apk
+rm -f /tmp/dnsmasq-full-*.apk
 ```
 
 ### Unmet dependencies
